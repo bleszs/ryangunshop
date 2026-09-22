@@ -21,11 +21,17 @@ selalu dibaca tool dari Firestore.
 npm install
 cp .env.example .env
 npm run check
+npm run test:firebase
 npm run dev
 ```
 
-Gunakan Firebase Emulator atau Application Default Credentials. Untuk webhook lokal,
-gunakan tunnel HTTPS lalu masukkan `/webhooks/whatsapp` ke konfigurasi Meta.
+`npm run test:firebase` menyalakan Firestore Emulator sementara dan memverifikasi
+isolasi tenant serta batas akses kasir. Test biasa memakai mock Ollama dan mock
+pengirim WhatsApp, sehingga tidak membutuhkan token Meta maupun server model aktif.
+
+Untuk menjalankan backend terhadap Firestore sungguhan, gunakan Application Default
+Credentials. Untuk webhook lokal, gunakan tunnel HTTPS lalu masukkan
+`/webhooks/whatsapp` ke konfigurasi Meta.
 
 ## Guardrail
 
@@ -36,4 +42,3 @@ gunakan tunnel HTTPS lalu masukkan `/webhooks/whatsapp` ke konfigurasi Meta.
 - Signature dibandingkan secara constant-time dan error tidak membocorkan secret.
 - Production perlu queue durable, retry/dead-letter, rate limit, App Secret rotation,
   signed URL singkat, serta retention/TTL untuk dedup dan audit.
-

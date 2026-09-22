@@ -1,23 +1,20 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Request, Response, Router } from "express";
-import { AgentService } from "./agent.js";
 import type { AppConfig } from "./config.js";
-import { FirestoreStoreRepository } from "./firestore-store.js";
 import { normalizePhone } from "./normalization.js";
-import type { IncomingTextMessage } from "./types.js";
+import type { AgentContext, AuthorizedUser, IncomingTextMessage } from "./types.js";
 
 type RawRequest = Request & { rawBody?: Buffer };
 
 export function registerWhatsAppRoutes(
   router: Router,
-  dependencies: {
-    config: AppConfig;
-    store: FirestoreStoreRepository;
-    agent: AgentService;
-    log: { error: (input: unknown, message?: string) => void };
-  },
+  dependencies: WhatsAppDependencies,
 ): void {
   const { config, store, agent, log } = dependencies;
+  const sendText = dependencies.sendText ?? sendWhatsAppText;
+  const schedule = dependencies.schedule ?? ((work: Promise<void>) => {
+    void work.catch((error) => log.error({ error }, "Background webhook task gagal"));
+  });
 
   router.get("/webhooks/whatsapp", (request: Request, response: Response) => {
     const mode = request.query["hub.mode"];
@@ -38,33 +35,57 @@ export function registerWhatsAppRoutes(
     }
 
     const messages = extractTextMessages(request.body);
-    response.sendStatus(200);
-
+    // Penjadwalan tidak menunggu proses selesai; ACK tetap dikirim segera.
     // Untuk production, pindahkan pekerjaan ini ke queue durable setelah ACK.
-    void Promise.all(messages.map(async (message) => {
+    schedule(Promise.all(messages.map(async (message) => {
       try {
         if (!(await store.claimMessage(message.id))) return;
         const phone = normalizePhone(message.from);
         const authorized = await store.findAuthorizedUser(phone);
         if (!authorized) {
-          await sendWhatsAppText(config, message.from, "Nomor ini belum terdaftar untuk RyanGunshop.");
+          await sendText(config, message.from, "Nomor ini belum terdaftar untuk RyanGunshop.");
           return;
         }
         const answer = await agent.answer(
           { ...authorized, whatsappMessageId: message.id },
           message.text,
         );
-        await sendWhatsAppText(config, message.from, answer);
+        await sendText(config, message.from, answer);
       } catch (error) {
         log.error({ error, messageId: message.id }, "Gagal memproses pesan WhatsApp");
-        await sendWhatsAppText(
+        await sendText(
           config,
           message.from,
           "Layanan sedang mengalami gangguan. Data tidak diubah; silakan coba lagi.",
         ).catch((sendError) => log.error({ sendError }, "Gagal mengirim pesan error"));
       }
-    }));
+    })).then(() => undefined));
+    response.sendStatus(200);
   });
+}
+
+export interface WhatsAppStore {
+  claimMessage(messageId: string): Promise<boolean>;
+  findAuthorizedUser(normalizedPhone: string): Promise<AuthorizedUser | null>;
+}
+
+export interface WhatsAppAgent {
+  answer(context: AgentContext, userText: string): Promise<string>;
+}
+
+export type WhatsAppTextSender = (
+  config: AppConfig,
+  recipient: string,
+  body: string,
+) => Promise<void>;
+
+export interface WhatsAppDependencies {
+  config: AppConfig;
+  store: WhatsAppStore;
+  agent: WhatsAppAgent;
+  log: { error: (input: unknown, message?: string) => void };
+  sendText?: WhatsAppTextSender;
+  schedule?: (work: Promise<void>) => void;
 }
 
 export function verifyMetaSignature(
@@ -142,4 +163,3 @@ async function sendWhatsAppText(
     throw new Error(`WhatsApp Graph API gagal dengan HTTP ${response.status}`);
   }
 }
-

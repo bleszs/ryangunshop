@@ -79,7 +79,7 @@ Status: `[x]` fondasi tersedia, `[ ]` masih harus diimplementasikan/dikonfiguras
 - [ ] Pindahkan proses webhook ke queue durable dan dead-letter queue.
 - [ ] Worker laporan + signed URL singkat untuk tool `generateReport`.
 - [ ] Flow confirmation token dua langkah sebelum tool mutasi ditambahkan.
-- [ ] Integration test Firebase Emulator + mock Ollama/WhatsApp.
+- [x] Integration test Firebase Emulator + mock Ollama/WhatsApp.
 
 ## Definition of Done
 

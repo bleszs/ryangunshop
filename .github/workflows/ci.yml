@@ -52,7 +52,13 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: backend-agent/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
       - name: Install dependencies
         run: npm ci
       - name: Build and test
         run: npm run check
+      - name: Test Firestore security rules
+        run: npm run test:firebase

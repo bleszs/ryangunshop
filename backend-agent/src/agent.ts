@@ -1,5 +1,5 @@
-import { Ollama, type Message } from "ollama";
-import { ToolRegistry } from "./tool-registry.js";
+import { Ollama, type ChatRequest, type ChatResponse, type Message, type Tool } from "ollama";
+import type { OllamaToolDefinition } from "./tool-registry.js";
 import type { AgentContext } from "./types.js";
 
 const SYSTEM_PROMPT = `Anda adalah asisten operasional RyanGunshop berbahasa Indonesia.
@@ -12,14 +12,15 @@ Aturan wajib:
 6. Jawab ringkas, jelas, dan jangan tampilkan reasoning internal.`;
 
 export class AgentService {
-  private readonly ollama: Ollama;
+  private readonly ollama: OllamaChatClient;
 
   constructor(
     host: string,
     private readonly model: string,
-    private readonly registry: ToolRegistry,
+    private readonly registry: AgentToolRegistry,
+    ollama?: OllamaChatClient,
   ) {
-    this.ollama = new Ollama({ host });
+    this.ollama = ollama ?? new Ollama({ host });
   }
 
   async answer(context: AgentContext, userText: string): Promise<string> {
@@ -33,7 +34,7 @@ export class AgentService {
       const response = await this.ollama.chat({
         model: this.model,
         messages,
-        tools: this.registry.definitions(),
+        tools: this.registry.definitions() as Tool[],
         stream: false,
         think: false,
       });
@@ -73,6 +74,15 @@ export class AgentService {
 
     return "Permintaan terlalu kompleks untuk diproses dengan aman. Coba satu pertanyaan stok atau laporan pada satu waktu.";
   }
+}
+
+export interface AgentToolRegistry {
+  definitions(): OllamaToolDefinition[];
+  execute(name: string, rawArguments: unknown, context: AgentContext): Promise<unknown>;
+}
+
+export interface OllamaChatClient {
+  chat(request: ChatRequest & { stream?: false }): Promise<ChatResponse>;
 }
 
 function containsBusinessNumber(text: string): boolean {

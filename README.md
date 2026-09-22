@@ -66,9 +66,12 @@ Dokumen keputusan dashboard terdapat di [PRODUCT.md](PRODUCT.md),
 cd backend-agent
 npm install
 npm run check
+npm run test:firebase
 ```
 
 Salin `.env.example` menjadi `.env`, lalu isi kredensial WhatsApp, Ollama, dan Firebase.
+Test Firebase memakai Local Emulator Suite, sedangkan alur agent/webhook memakai mock
+dan tidak mengirim pesan nyata.
 
 ## Prinsip data
 
