@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function belongsToStore(storeId) {
+      return signedIn() && request.auth.token.storeId == storeId;
+    }
+
+    function isOwner(storeId) {
+      return belongsToStore(storeId) && request.auth.token.role == 'OWNER';
+    }
+
+    match /stores/{storeId} {
+      allow read: if belongsToStore(storeId);
+      allow write: if isOwner(storeId);
+
+      match /products/{productId} {
+        allow read: if belongsToStore(storeId);
+        allow create, delete: if isOwner(storeId);
+        allow update: if isOwner(storeId) || (
+          belongsToStore(storeId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['stock', 'isLowStock', 'updatedAt'])
+          && request.resource.data.stock is int
+          && request.resource.data.stock >= 0
+          && request.resource.data.stock < resource.data.stock
+          && request.resource.data.isLowStock
+            == (request.resource.data.stock <= resource.data.minimumStock)
+        );
+      }
+
+      match /inventoryMutations/{mutationId} {
+        allow read: if belongsToStore(storeId);
+        allow create: if belongsToStore(storeId)
+          && request.resource.data.keys().hasOnly([
+            'productId',
+            'delta',
+            'transactionId',
+            'clientOccurredAt',
+            'appliedAt'
+          ])
+          && request.resource.data.productId is string
+          && request.resource.data.transactionId is string
+          && request.resource.data.delta is int
+          && (request.resource.data.delta < 0 || isOwner(storeId));
+        allow update, delete: if false;
+      }
+
+      match /layouts/{layoutId} {
+        allow read: if belongsToStore(storeId);
+        allow create, update, delete: if isOwner(storeId);
+
+        match /fixtures/{fixtureId} {
+          allow read: if belongsToStore(storeId);
+          allow create, update, delete: if isOwner(storeId);
+        }
+      }
+
+      match /transactions/{transactionId} {
+        allow read: if belongsToStore(storeId);
+        allow create: if belongsToStore(storeId)
+          && request.resource.data.cashierId == request.auth.uid
+          && request.resource.data.status == 'SUCCESS';
+        // Pembatalan sebaiknya melalui callable backend yang diaudit.
+        allow update, delete: if false;
+      }
+
+      match /predictions/{predictionId} {
+        allow read: if isOwner(storeId);
+        allow create: if belongsToStore(storeId)
+          && request.resource.data.cashierId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      match /reportJobs/{jobId} {
+        allow read, create: if isOwner(storeId);
+        allow update, delete: if false;
+      }
+
+      // Ditulis Admin SDK backend; klien hanya boleh dibaca owner bila diperlukan.
+      match /agentActions/{actionId} {
+        allow read: if isOwner(storeId);
+        allow write: if false;
+      }
+    }
+
+    // Whitelist WhatsApp hanya untuk backend Admin SDK.
+    match /whatsappUsers/{phone} {
+      allow read, write: if false;
+    }
+
+    match /whatsappMessages/{messageId} {
+      allow read, write: if false;
+    }
+  }
+}

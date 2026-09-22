@@ -1,0 +1,32 @@
+# Flutter / Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+.dart_tool/
+.flutter-plugins-dependencies
+mobile/.pub/
+
+# Firebase credentials and local logs. Client config files are non-secret and
+# committed so a clean checkout can build the registered Android app.
+service-account*.json
+firebase-debug.log
+firestore-debug.log
+
+# Node
+backend-agent/node_modules/
+backend-agent/node_modules_broken_*/
+backend-agent/dist/
+backend-agent/.env
+
+# Local assets and reports
+.artifacts/
+mobile/assets/models/*.tflite
+reports/
+*.keystore
+*.jks
+
+# OS
+.DS_Store
+Thumbs.db

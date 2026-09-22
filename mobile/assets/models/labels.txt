@@ -1,0 +1,3 @@
+# Ganti dengan label model, satu label per baris.
+# Nilai label harus sama persis dengan ProductEntity.aiLabel.
+

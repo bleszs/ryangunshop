@@ -1,0 +1,5 @@
+{
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "dart.projectSearchDepth": 4,
+  "dart.devToolsLocation": "beside"
+}

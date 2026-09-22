@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "884773335114",
+    "project_id": "ryangunshop-pos-2026",
+    "storage_bucket": "ryangunshop-pos-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:884773335114:android:b204a53c5bdabfc3f136b3",
+        "android_client_info": {
+          "package_name": "id.ryangunshop.ryangunshop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgEjiOY0wKWHjY1mqORlE0qZMg07LpM_g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
