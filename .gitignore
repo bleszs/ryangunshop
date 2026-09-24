@@ -23,7 +23,7 @@ backend-agent/.env
 # Local assets and reports
 .artifacts/
 mobile/assets/models/*.tflite
-reports/
+/reports/
 *.keystore
 *.jks
 
