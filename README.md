@@ -14,7 +14,7 @@ RyanGunshop/
 │   ├── lib/features/        # ViewModel dan UI per fitur
 │   └── lib/di/              # Composition root
 ├── backend-agent/           # Node/TypeScript: WhatsApp + Ollama + Firestore
-├── firebase/                # Firestore rules dan indexes
+├── firebase/                # Firestore/Storage rules, indexes, dan lifecycle
 ├── docs/                    # Arsitektur dan skema remote
 └── TODO.md                  # Checklist berdasarkan FR/NFR
 ```
@@ -51,8 +51,7 @@ Sebelum mengaktifkan kamera AI:
    `mobile/assets/models/product_classifier.tflite`.
 2. Isi `mobile/assets/models/labels.txt`, satu label per baris.
 3. Daftarkan asset model di `mobile/pubspec.yaml`.
-4. Jalankan `flutterfire configure` untuk membuat Firebase options dan tambahkan
-   inisialisasi Firebase di `main.dart`.
+4. Kalibrasi normalisasi input dan confidence threshold pada perangkat target.
 
 Classifier dibuat lazy sehingga aplikasi dasar tetap dapat dibuka tanpa model/Firebase.
 
@@ -73,6 +72,27 @@ Salin `.env.example` menjadi `.env`, lalu isi kredensial WhatsApp, Ollama, dan F
 Test Firebase memakai Local Emulator Suite, sedangkan alur agent/webhook memakai mock
 dan tidak mengirim pesan nyata.
 
+### Foto koreksi privat
+
+Foto koreksi hanya diambil setelah consent eksplisit. Aplikasi menghapus EXIF/GPS,
+membatasi sisi terpanjang menjadi 1280 px, menyimpannya di direktori privat, lalu
+mengantrekan upload tenant-scoped saat perangkat kembali online. Penolakan consent
+atau kegagalan foto tidak membatalkan produk yang sudah dipilih kasir.
+
+Sebelum mengaktifkannya di produksi, aktifkan Firebase Storage pada paket Blaze,
+deploy rules, lalu pasang lifecycle penghapusan 30 hari pada bucket yang benar:
+
+```bash
+firebase deploy --only storage
+gcloud storage buckets update gs://BUCKET_NAME \
+  --lifecycle-file=firebase/storage.lifecycle.json
+```
+
+Gunakan Firebase Console untuk memantau request App Check terlebih dahulu sebelum
+menyalakan enforcement Storage. File lifecycle tersedia di
+`firebase/storage.lifecycle.json`; langkah produksi ini sengaja tetap belum dicentang
+di `TODO.md` sampai bucket dan akun billing pemilik tersedia.
+
 ## Prinsip data
 
 - Drift/SQLite adalah sumber kebenaran UI saat offline; Firestore untuk sinkronisasi.
@@ -81,5 +101,7 @@ dan tidak mengirim pesan nyata.
 - Nominal memakai `int` rupiah, bukan floating point.
 - Checkout, item snapshot, dan pengurangan stok berada dalam satu transaction SQLite.
 - Password tidak disimpan aplikasi; gunakan Firebase Authentication.
+- Foto koreksi tidak dapat dibaca kembali oleh client; akses dataset hanya melalui
+  backend Admin SDK yang diaudit dan objek otomatis dihapus setelah 30 hari.
 - Agent tidak menerima path collection atau `storeId` dari LLM. Semua angka bisnis wajib
   berasal dari tool registry yang membaca Firestore.

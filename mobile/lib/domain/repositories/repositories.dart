@@ -112,6 +112,19 @@ abstract interface class PredictionRepository {
   Future<void> saveCorrection(PredictionCorrection correction);
 }
 
+abstract interface class PredictionCorrectionPhotoRemoteRepository {
+  Future<String> uploadCorrectionPhoto({
+    required String storeId,
+    required String predictionId,
+    required String localPhotoPath,
+    required DateTime expiresAt,
+    required String selectedProductId,
+    required String modelVersion,
+    required String? initialLabel,
+    required double? initialConfidence,
+  });
+}
+
 abstract interface class StoreLayoutRepository {
   Stream<StoreLayoutEntity?> watchLayout(String storeId);
   Future<void> saveLayout(StoreLayoutEntity layout);

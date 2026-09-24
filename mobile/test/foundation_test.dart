@@ -706,6 +706,48 @@ void main() {
     },
   );
 
+  test('migrasi versi 4 menambah retention foto koreksi', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp(
+      'ryangunshop_v4_migration_',
+    );
+    final file = File('${tempDirectory.path}/migration.sqlite');
+    final oldExecutor = NativeDatabase(file);
+    await oldExecutor.ensureOpen(_VersionFourExecutorUser());
+    await oldExecutor.runCustom('''
+      CREATE TABLE predictions (
+        id TEXT PRIMARY KEY NOT NULL,
+        store_id TEXT NOT NULL,
+        captured_at INTEGER NOT NULL,
+        ai_label TEXT,
+        confidence REAL,
+        selected_product_id TEXT,
+        corrected INTEGER NOT NULL,
+        correction_photo_uri TEXT,
+        cashier_id TEXT NOT NULL,
+        model_version TEXT NOT NULL,
+        consent_to_training INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL,
+        sync_state TEXT NOT NULL DEFAULT 'pending'
+      )
+    ''', const []);
+    await oldExecutor.runCustom('PRAGMA user_version = 4', const []);
+    await oldExecutor.close();
+
+    final migrated = AppDatabase.forTesting(NativeDatabase(file));
+    addTearDown(() async {
+      await migrated.close();
+      await tempDirectory.delete(recursive: true);
+    });
+
+    final columns = await migrated
+        .customSelect('PRAGMA table_info(predictions)')
+        .get();
+    expect(
+      columns.map((column) => column.read<String>('name')),
+      contains('correction_photo_expires_at'),
+    );
+  });
+
   test('menghitung total dan laba dalam rupiah', () {
     const aqua = ProductEntity(
       id: 'aqua',
@@ -936,6 +978,17 @@ class _VersionTwoExecutorUser extends QueryExecutorUser {
 class _VersionThreeExecutorUser extends QueryExecutorUser {
   @override
   int get schemaVersion => 3;
+
+  @override
+  Future<void> beforeOpen(
+    QueryExecutor executor,
+    OpeningDetails details,
+  ) async {}
+}
+
+class _VersionFourExecutorUser extends QueryExecutorUser {
+  @override
+  int get schemaVersion => 4;
 
   @override
   Future<void> beforeOpen(

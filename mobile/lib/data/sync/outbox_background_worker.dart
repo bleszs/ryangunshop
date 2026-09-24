@@ -3,14 +3,17 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../core/security/firebase_app_security.dart';
 import '../local/app_database.dart';
 import '../remote/firestore_catalog_data_source.dart';
+import '../remote/firebase_correction_photo_data_source.dart';
 import 'inventory_stock_outbox_sync.dart';
 import 'product_catalog_outbox_sync.dart';
+import 'prediction_correction_photo_outbox_sync.dart';
 import 'store_layout_outbox_sync.dart';
 
 abstract final class OutboxBackgroundWorker {
@@ -86,6 +89,10 @@ void outboxCallbackDispatcher() {
       await InventoryStockOutboxSyncProcessor(
         database: database,
         remote: remote,
+      ).processPending();
+      await PredictionCorrectionPhotoOutboxSyncProcessor(
+        database: database,
+        remote: FirebaseCorrectionPhotoDataSource(FirebaseStorage.instance),
       ).processPending();
       return true;
     } on Object {

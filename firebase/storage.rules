@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function belongsToStore(storeId) {
+      return request.auth != null
+        && request.auth.token.active == true
+        && request.auth.token.storeId == storeId;
+    }
+
+    match /predictionCorrections/{storeId}/{fileName} {
+      allow create: if belongsToStore(storeId)
+        && fileName.matches('^[A-Za-z0-9_-]+\\.jpg$')
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType == 'image/jpeg'
+        && request.resource.metadata.keys().hasAll([
+          'storeId',
+          'predictionId',
+          'selectedProductId',
+          'modelVersion',
+          'consent',
+          'expiresAt'
+        ])
+        && request.resource.metadata.storeId == storeId
+        && request.resource.metadata.predictionId + '.jpg' == fileName
+        && request.resource.metadata.selectedProductId is string
+        && request.resource.metadata.modelVersion is string
+        && request.resource.metadata.consent == 'true'
+        && request.resource.metadata.expiresAt is string;
+
+      // Dataset hanya dibaca/dihapus oleh backend Admin SDK yang diaudit.
+      allow read, update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -3031,6 +3031,17 @@ class $PredictionsTable extends Predictions
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _correctionPhotoExpiresAtMeta =
+      const VerificationMeta('correctionPhotoExpiresAt');
+  @override
+  late final GeneratedColumn<DateTime> correctionPhotoExpiresAt =
+      GeneratedColumn<DateTime>(
+        'correction_photo_expires_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _cashierIdMeta = const VerificationMeta(
     'cashierId',
   );
@@ -3101,6 +3112,7 @@ class $PredictionsTable extends Predictions
     selectedProductId,
     corrected,
     correctionPhotoUri,
+    correctionPhotoExpiresAt,
     cashierId,
     modelVersion,
     consentToTraining,
@@ -3175,6 +3187,15 @@ class $PredictionsTable extends Predictions
         correctionPhotoUri.isAcceptableOrUnknown(
           data['correction_photo_uri']!,
           _correctionPhotoUriMeta,
+        ),
+      );
+    }
+    if (data.containsKey('correction_photo_expires_at')) {
+      context.handle(
+        _correctionPhotoExpiresAtMeta,
+        correctionPhotoExpiresAt.isAcceptableOrUnknown(
+          data['correction_photo_expires_at']!,
+          _correctionPhotoExpiresAtMeta,
         ),
       );
     }
@@ -3261,6 +3282,10 @@ class $PredictionsTable extends Predictions
         DriftSqlType.string,
         data['${effectivePrefix}correction_photo_uri'],
       ),
+      correctionPhotoExpiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}correction_photo_expires_at'],
+      ),
       cashierId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}cashier_id'],
@@ -3299,6 +3324,7 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
   final String? selectedProductId;
   final bool corrected;
   final String? correctionPhotoUri;
+  final DateTime? correctionPhotoExpiresAt;
   final String cashierId;
   final String modelVersion;
   final bool consentToTraining;
@@ -3313,6 +3339,7 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
     this.selectedProductId,
     required this.corrected,
     this.correctionPhotoUri,
+    this.correctionPhotoExpiresAt,
     required this.cashierId,
     required this.modelVersion,
     required this.consentToTraining,
@@ -3337,6 +3364,11 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
     map['corrected'] = Variable<bool>(corrected);
     if (!nullToAbsent || correctionPhotoUri != null) {
       map['correction_photo_uri'] = Variable<String>(correctionPhotoUri);
+    }
+    if (!nullToAbsent || correctionPhotoExpiresAt != null) {
+      map['correction_photo_expires_at'] = Variable<DateTime>(
+        correctionPhotoExpiresAt,
+      );
     }
     map['cashier_id'] = Variable<String>(cashierId);
     map['model_version'] = Variable<String>(modelVersion);
@@ -3364,6 +3396,9 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
       correctionPhotoUri: correctionPhotoUri == null && nullToAbsent
           ? const Value.absent()
           : Value(correctionPhotoUri),
+      correctionPhotoExpiresAt: correctionPhotoExpiresAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(correctionPhotoExpiresAt),
       cashierId: Value(cashierId),
       modelVersion: Value(modelVersion),
       consentToTraining: Value(consentToTraining),
@@ -3390,6 +3425,9 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
       correctionPhotoUri: serializer.fromJson<String?>(
         json['correctionPhotoUri'],
       ),
+      correctionPhotoExpiresAt: serializer.fromJson<DateTime?>(
+        json['correctionPhotoExpiresAt'],
+      ),
       cashierId: serializer.fromJson<String>(json['cashierId']),
       modelVersion: serializer.fromJson<String>(json['modelVersion']),
       consentToTraining: serializer.fromJson<bool>(json['consentToTraining']),
@@ -3409,6 +3447,9 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
       'selectedProductId': serializer.toJson<String?>(selectedProductId),
       'corrected': serializer.toJson<bool>(corrected),
       'correctionPhotoUri': serializer.toJson<String?>(correctionPhotoUri),
+      'correctionPhotoExpiresAt': serializer.toJson<DateTime?>(
+        correctionPhotoExpiresAt,
+      ),
       'cashierId': serializer.toJson<String>(cashierId),
       'modelVersion': serializer.toJson<String>(modelVersion),
       'consentToTraining': serializer.toJson<bool>(consentToTraining),
@@ -3426,6 +3467,7 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
     Value<String?> selectedProductId = const Value.absent(),
     bool? corrected,
     Value<String?> correctionPhotoUri = const Value.absent(),
+    Value<DateTime?> correctionPhotoExpiresAt = const Value.absent(),
     String? cashierId,
     String? modelVersion,
     bool? consentToTraining,
@@ -3444,6 +3486,9 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
     correctionPhotoUri: correctionPhotoUri.present
         ? correctionPhotoUri.value
         : this.correctionPhotoUri,
+    correctionPhotoExpiresAt: correctionPhotoExpiresAt.present
+        ? correctionPhotoExpiresAt.value
+        : this.correctionPhotoExpiresAt,
     cashierId: cashierId ?? this.cashierId,
     modelVersion: modelVersion ?? this.modelVersion,
     consentToTraining: consentToTraining ?? this.consentToTraining,
@@ -3468,6 +3513,9 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
       correctionPhotoUri: data.correctionPhotoUri.present
           ? data.correctionPhotoUri.value
           : this.correctionPhotoUri,
+      correctionPhotoExpiresAt: data.correctionPhotoExpiresAt.present
+          ? data.correctionPhotoExpiresAt.value
+          : this.correctionPhotoExpiresAt,
       cashierId: data.cashierId.present ? data.cashierId.value : this.cashierId,
       modelVersion: data.modelVersion.present
           ? data.modelVersion.value
@@ -3491,6 +3539,7 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
           ..write('selectedProductId: $selectedProductId, ')
           ..write('corrected: $corrected, ')
           ..write('correctionPhotoUri: $correctionPhotoUri, ')
+          ..write('correctionPhotoExpiresAt: $correctionPhotoExpiresAt, ')
           ..write('cashierId: $cashierId, ')
           ..write('modelVersion: $modelVersion, ')
           ..write('consentToTraining: $consentToTraining, ')
@@ -3510,6 +3559,7 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
     selectedProductId,
     corrected,
     correctionPhotoUri,
+    correctionPhotoExpiresAt,
     cashierId,
     modelVersion,
     consentToTraining,
@@ -3528,6 +3578,7 @@ class PredictionRow extends DataClass implements Insertable<PredictionRow> {
           other.selectedProductId == this.selectedProductId &&
           other.corrected == this.corrected &&
           other.correctionPhotoUri == this.correctionPhotoUri &&
+          other.correctionPhotoExpiresAt == this.correctionPhotoExpiresAt &&
           other.cashierId == this.cashierId &&
           other.modelVersion == this.modelVersion &&
           other.consentToTraining == this.consentToTraining &&
@@ -3544,6 +3595,7 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
   final Value<String?> selectedProductId;
   final Value<bool> corrected;
   final Value<String?> correctionPhotoUri;
+  final Value<DateTime?> correctionPhotoExpiresAt;
   final Value<String> cashierId;
   final Value<String> modelVersion;
   final Value<bool> consentToTraining;
@@ -3559,6 +3611,7 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
     this.selectedProductId = const Value.absent(),
     this.corrected = const Value.absent(),
     this.correctionPhotoUri = const Value.absent(),
+    this.correctionPhotoExpiresAt = const Value.absent(),
     this.cashierId = const Value.absent(),
     this.modelVersion = const Value.absent(),
     this.consentToTraining = const Value.absent(),
@@ -3575,6 +3628,7 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
     this.selectedProductId = const Value.absent(),
     required bool corrected,
     this.correctionPhotoUri = const Value.absent(),
+    this.correctionPhotoExpiresAt = const Value.absent(),
     required String cashierId,
     required String modelVersion,
     this.consentToTraining = const Value.absent(),
@@ -3597,6 +3651,7 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
     Expression<String>? selectedProductId,
     Expression<bool>? corrected,
     Expression<String>? correctionPhotoUri,
+    Expression<DateTime>? correctionPhotoExpiresAt,
     Expression<String>? cashierId,
     Expression<String>? modelVersion,
     Expression<bool>? consentToTraining,
@@ -3614,6 +3669,8 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
       if (corrected != null) 'corrected': corrected,
       if (correctionPhotoUri != null)
         'correction_photo_uri': correctionPhotoUri,
+      if (correctionPhotoExpiresAt != null)
+        'correction_photo_expires_at': correctionPhotoExpiresAt,
       if (cashierId != null) 'cashier_id': cashierId,
       if (modelVersion != null) 'model_version': modelVersion,
       if (consentToTraining != null) 'consent_to_training': consentToTraining,
@@ -3632,6 +3689,7 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
     Value<String?>? selectedProductId,
     Value<bool>? corrected,
     Value<String?>? correctionPhotoUri,
+    Value<DateTime?>? correctionPhotoExpiresAt,
     Value<String>? cashierId,
     Value<String>? modelVersion,
     Value<bool>? consentToTraining,
@@ -3648,6 +3706,8 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
       selectedProductId: selectedProductId ?? this.selectedProductId,
       corrected: corrected ?? this.corrected,
       correctionPhotoUri: correctionPhotoUri ?? this.correctionPhotoUri,
+      correctionPhotoExpiresAt:
+          correctionPhotoExpiresAt ?? this.correctionPhotoExpiresAt,
       cashierId: cashierId ?? this.cashierId,
       modelVersion: modelVersion ?? this.modelVersion,
       consentToTraining: consentToTraining ?? this.consentToTraining,
@@ -3684,6 +3744,11 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
     if (correctionPhotoUri.present) {
       map['correction_photo_uri'] = Variable<String>(correctionPhotoUri.value);
     }
+    if (correctionPhotoExpiresAt.present) {
+      map['correction_photo_expires_at'] = Variable<DateTime>(
+        correctionPhotoExpiresAt.value,
+      );
+    }
     if (cashierId.present) {
       map['cashier_id'] = Variable<String>(cashierId.value);
     }
@@ -3716,6 +3781,7 @@ class PredictionsCompanion extends UpdateCompanion<PredictionRow> {
           ..write('selectedProductId: $selectedProductId, ')
           ..write('corrected: $corrected, ')
           ..write('correctionPhotoUri: $correctionPhotoUri, ')
+          ..write('correctionPhotoExpiresAt: $correctionPhotoExpiresAt, ')
           ..write('cashierId: $cashierId, ')
           ..write('modelVersion: $modelVersion, ')
           ..write('consentToTraining: $consentToTraining, ')
@@ -8419,6 +8485,7 @@ typedef $$PredictionsTableCreateCompanionBuilder =
       Value<String?> selectedProductId,
       required bool corrected,
       Value<String?> correctionPhotoUri,
+      Value<DateTime?> correctionPhotoExpiresAt,
       required String cashierId,
       required String modelVersion,
       Value<bool> consentToTraining,
@@ -8436,6 +8503,7 @@ typedef $$PredictionsTableUpdateCompanionBuilder =
       Value<String?> selectedProductId,
       Value<bool> corrected,
       Value<String?> correctionPhotoUri,
+      Value<DateTime?> correctionPhotoExpiresAt,
       Value<String> cashierId,
       Value<String> modelVersion,
       Value<bool> consentToTraining,
@@ -8490,6 +8558,11 @@ class $$PredictionsTableFilterComposer
 
   ColumnFilters<String> get correctionPhotoUri => $composableBuilder(
     column: $table.correctionPhotoUri,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get correctionPhotoExpiresAt => $composableBuilder(
+    column: $table.correctionPhotoExpiresAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8568,6 +8641,11 @@ class $$PredictionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get correctionPhotoExpiresAt => $composableBuilder(
+    column: $table.correctionPhotoExpiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get cashierId => $composableBuilder(
     column: $table.cashierId,
     builder: (column) => ColumnOrderings(column),
@@ -8635,6 +8713,11 @@ class $$PredictionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<DateTime> get correctionPhotoExpiresAt => $composableBuilder(
+    column: $table.correctionPhotoExpiresAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get cashierId =>
       $composableBuilder(column: $table.cashierId, builder: (column) => column);
 
@@ -8694,6 +8777,8 @@ class $$PredictionsTableTableManager
                 Value<String?> selectedProductId = const Value.absent(),
                 Value<bool> corrected = const Value.absent(),
                 Value<String?> correctionPhotoUri = const Value.absent(),
+                Value<DateTime?> correctionPhotoExpiresAt =
+                    const Value.absent(),
                 Value<String> cashierId = const Value.absent(),
                 Value<String> modelVersion = const Value.absent(),
                 Value<bool> consentToTraining = const Value.absent(),
@@ -8709,6 +8794,7 @@ class $$PredictionsTableTableManager
                 selectedProductId: selectedProductId,
                 corrected: corrected,
                 correctionPhotoUri: correctionPhotoUri,
+                correctionPhotoExpiresAt: correctionPhotoExpiresAt,
                 cashierId: cashierId,
                 modelVersion: modelVersion,
                 consentToTraining: consentToTraining,
@@ -8726,6 +8812,8 @@ class $$PredictionsTableTableManager
                 Value<String?> selectedProductId = const Value.absent(),
                 required bool corrected,
                 Value<String?> correctionPhotoUri = const Value.absent(),
+                Value<DateTime?> correctionPhotoExpiresAt =
+                    const Value.absent(),
                 required String cashierId,
                 required String modelVersion,
                 Value<bool> consentToTraining = const Value.absent(),
@@ -8741,6 +8829,7 @@ class $$PredictionsTableTableManager
                 selectedProductId: selectedProductId,
                 corrected: corrected,
                 correctionPhotoUri: correctionPhotoUri,
+                correctionPhotoExpiresAt: correctionPhotoExpiresAt,
                 cashierId: cashierId,
                 modelVersion: modelVersion,
                 consentToTraining: consentToTraining,

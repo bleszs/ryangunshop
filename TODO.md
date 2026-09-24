@@ -73,7 +73,10 @@ Status: `[x]` fondasi tersedia, `[ ]` masih harus diimplementasikan/dikonfiguras
 
 - [x] Moving average penjualan 28 hari, lead time pemasok, safety stock, titik
   pemesanan ulang, dan rekomendasi jumlah restok lokal (FR-12).
-- [ ] Upload foto koreksi setelah consent, hapus EXIF, dan tetapkan retention (FR-13).
+- [x] Consent foto koreksi, hapus EXIF, retention lokal 30 hari, serta antrean
+  upload tenant-scoped ke Firebase Storage (FR-13).
+- [ ] Aktifkan bucket Firebase Storage/Blaze, terapkan lifecycle 30 hari dari
+  `firebase/storage.lifecycle.json`, lalu lakukan smoke test upload produksi.
 - [ ] Deploy backend/Ollama private network + TLS + health monitoring 24/7 (NFR-08).
 - [ ] Konfigurasi webhook Meta serta `whatsappUsers` whitelist (FR-15).
 - [ ] Pindahkan proses webhook ke queue durable dan dead-letter queue.

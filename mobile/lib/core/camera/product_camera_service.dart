@@ -71,6 +71,10 @@ class ProductCameraService {
   }
 
   Future<String> captureForBarcode() async {
+    return captureStillPhoto();
+  }
+
+  Future<String> captureStillPhoto() async {
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
       throw StateError('Kamera belum diinisialisasi');

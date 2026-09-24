@@ -147,6 +147,7 @@ class PredictionEntity {
     required this.selectedProductId,
     required this.corrected,
     required this.correctionPhotoUri,
+    required this.correctionPhotoExpiresAt,
     required this.cashierId,
     required this.modelVersion,
     required this.consentToTraining,
@@ -160,6 +161,7 @@ class PredictionEntity {
   final String? selectedProductId;
   final bool corrected;
   final String? correctionPhotoUri;
+  final DateTime? correctionPhotoExpiresAt;
   final String cashierId;
   final String modelVersion;
   final bool consentToTraining;
@@ -314,6 +316,7 @@ class PredictionCorrection {
     required this.selectedProductId,
     required this.corrected,
     required this.correctionPhotoUri,
+    required this.correctionPhotoExpiresAt,
     required this.modelVersion,
     required this.consentToTraining,
   });
@@ -326,6 +329,7 @@ class PredictionCorrection {
   final String? selectedProductId;
   final bool corrected;
   final String? correctionPhotoUri;
+  final DateTime? correctionPhotoExpiresAt;
   final String modelVersion;
   final bool consentToTraining;
 }

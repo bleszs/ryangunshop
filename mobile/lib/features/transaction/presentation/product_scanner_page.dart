@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/camera/camera_permission_gateway.dart';
 import '../../../core/camera/product_camera_service.dart';
+import '../../../core/privacy/correction_photo_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../domain/entities/entities.dart';
@@ -17,12 +19,14 @@ class ProductScannerPage extends StatefulWidget {
   const ProductScannerPage({
     required this.createViewModel,
     this.cameraService,
+    this.correctionPhotoStore,
     this.permissionGateway = const PermissionHandlerCameraPermissionGateway(),
     super.key,
   });
 
   final TransactionViewModelFactory createViewModel;
   final ProductCameraService? cameraService;
+  final LocalCorrectionPhotoStore? correctionPhotoStore;
   final CameraPermissionGateway permissionGateway;
 
   @override
@@ -43,10 +47,12 @@ enum _ScannerState {
 class _ProductScannerPageState extends State<ProductScannerPage>
     with WidgetsBindingObserver {
   late final ProductCameraService _camera;
+  late final LocalCorrectionPhotoStore _correctionPhotos;
   TransactionViewModel? _transaction;
   _ScannerState _scannerState = _ScannerState.preparing;
   String? _cameraError;
   bool _isBarcodeScanning = false;
+  bool _isPreparingCorrectionPhoto = false;
   bool _torchEnabled = false;
   bool _releasedForLifecycle = false;
   int _generation = 0;
@@ -55,6 +61,9 @@ class _ProductScannerPageState extends State<ProductScannerPage>
   void initState() {
     super.initState();
     _camera = widget.cameraService ?? ProductCameraService();
+    _correctionPhotos =
+        widget.correctionPhotoStore ?? LocalCorrectionPhotoStore();
+    unawaited(_correctionPhotos.purgeExpired());
     WidgetsBinding.instance.addObserver(this);
     unawaited(_prepare());
   }
@@ -246,8 +255,24 @@ class _ProductScannerPageState extends State<ProductScannerPage>
       builder: (_) => _ManualProductSearch(transaction: transaction),
     );
     if (product == null || !mounted) return;
-    if (transaction.pendingRecognition != null) {
-      await transaction.correctPrediction(product);
+    final pending = transaction.pendingRecognition;
+    if (pending != null) {
+      final isCorrection = product.id != pending.product.id;
+      final sharePhoto = isCorrection
+          ? await showModalBottomSheet<bool>(
+              context: context,
+              isScrollControlled: true,
+              showDragHandle: true,
+              builder: (_) =>
+                  _CorrectionConsentSheet(productName: product.name),
+            )
+          : false;
+      if (!mounted) return;
+      if (sharePhoto == true) {
+        await _saveCorrectionWithPhoto(transaction, product);
+      } else {
+        await transaction.correctPrediction(product);
+      }
     } else {
       transaction.addToCart(product);
     }
@@ -256,6 +281,53 @@ class _ProductScannerPageState extends State<ProductScannerPage>
       SnackBar(content: Text('${product.name} masuk ke keranjang.')),
     );
     await _restartAnalysis();
+  }
+
+  Future<void> _saveCorrectionWithPhoto(
+    TransactionViewModel transaction,
+    ProductEntity product,
+  ) async {
+    setState(() => _isPreparingCorrectionPhoto = true);
+    String? sourcePath;
+    try {
+      sourcePath = await _camera.captureStillPhoto();
+      final stored = await _correctionPhotos.sanitizeAndStore(
+        storeId: transaction.storeId,
+        sourceImagePath: sourcePath,
+      );
+      await transaction.correctPrediction(
+        product,
+        correctionPhotoUri: stored.path,
+        correctionPhotoExpiresAt: stored.expiresAt,
+        consentToTraining: true,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Koreksi dan foto privat masuk antrean sinkronisasi.'),
+        ),
+      );
+    } on Object {
+      await transaction.correctPrediction(product);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Produk tetap ditambahkan. Foto koreksi gagal disiapkan dan tidak disimpan.',
+          ),
+        ),
+      );
+    } finally {
+      if (sourcePath != null) {
+        try {
+          final source = File(sourcePath);
+          if (await source.exists()) await source.delete();
+        } on Object {
+          // Cache kamera akan dibersihkan sistem; jangan batalkan transaksi.
+        }
+      }
+      if (mounted) setState(() => _isPreparingCorrectionPhoto = false);
+    }
   }
 
   Future<void> _openCart() async {
@@ -392,6 +464,7 @@ class _ProductScannerPageState extends State<ProductScannerPage>
               transaction: transaction,
               cameraError: _cameraError,
               isBarcodeScanning: _isBarcodeScanning,
+              isPreparingCorrectionPhoto: _isPreparingCorrectionPhoto,
               onConfirm: _confirmPrediction,
               onRetry: _restartAnalysis,
               onBarcode: _scanBarcode,
@@ -502,6 +575,7 @@ class _ScannerResultPanel extends StatelessWidget {
     required this.transaction,
     required this.cameraError,
     required this.isBarcodeScanning,
+    required this.isPreparingCorrectionPhoto,
     required this.onConfirm,
     required this.onRetry,
     required this.onBarcode,
@@ -511,6 +585,7 @@ class _ScannerResultPanel extends StatelessWidget {
   final TransactionViewModel? transaction;
   final String? cameraError;
   final bool isBarcodeScanning;
+  final bool isPreparingCorrectionPhoto;
   final VoidCallback onConfirm;
   final VoidCallback onRetry;
   final VoidCallback onBarcode;
@@ -526,7 +601,9 @@ class _ScannerResultPanel extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: pending != null
+        child: isPreparingCorrectionPhoto
+            ? const _CorrectionPhotoStatus()
+            : pending != null
             ? _RecognitionResult(
                 pending: pending,
                 onConfirm: onConfirm,
@@ -547,6 +624,36 @@ class _ScannerResultPanel extends StatelessWidget {
                 onManual: onManual,
               ),
       ),
+    );
+  }
+}
+
+class _CorrectionPhotoStatus extends StatelessWidget {
+  const _CorrectionPhotoStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        AppSpinner(size: 24),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mengamankan foto koreksi…',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Metadata lokasi dihapus sebelum foto disimpan.',
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -933,6 +1040,111 @@ class _CartBadge extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CorrectionConsentSheet extends StatelessWidget {
+  const _CorrectionConsentSheet({required this.productName});
+
+  final String productName;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(AppRadii.control),
+                  ),
+                ),
+                child: SizedBox.square(
+                  dimension: 48,
+                  child: Icon(
+                    Icons.auto_awesome_outlined,
+                    color: AppColors.slate700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Bantu tingkatkan pengenalan?',
+              style: AppTextStyles.editorialTitle,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pilihan yang benar: $productName. Jika Anda setuju, RyanGunshop '
+              'akan mengambil satu foto baru sebagai contoh pelatihan.',
+              style: const TextStyle(color: AppColors.muted, height: 1.45),
+            ),
+            const SizedBox(height: 18),
+            const _PrivacyFact(
+              icon: Icons.location_off_outlined,
+              text: 'EXIF dan informasi lokasi dihapus sebelum disimpan.',
+            ),
+            const SizedBox(height: 10),
+            const _PrivacyFact(
+              icon: Icons.schedule_outlined,
+              text: 'Foto disimpan maksimal 30 hari lalu dihapus.',
+            ),
+            const SizedBox(height: 10),
+            const _PrivacyFact(
+              icon: Icons.cloud_upload_outlined,
+              text: 'Saat offline, upload menunggu koneksi yang aman.',
+            ),
+            const SizedBox(height: 22),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.camera_alt_outlined),
+              label: const Text('Setuju & ambil foto'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Lanjut tanpa foto'),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Menolak tidak memengaruhi transaksi atau akses aplikasi.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrivacyFact extends StatelessWidget {
+  const _PrivacyFact({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 21, color: AppColors.slate600),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(color: AppColors.ink, height: 1.4),
+          ),
+        ),
+      ],
     );
   }
 }

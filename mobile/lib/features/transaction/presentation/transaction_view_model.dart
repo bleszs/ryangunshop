@@ -68,6 +68,7 @@ class TransactionViewModel extends ChangeNotifier {
 
   int get cartQuantity =>
       _cart.values.fold(0, (total, line) => total + line.quantity);
+  String get storeId => _storeId;
 
   Future<void> analyzeFrame(RgbFrame frame) async {
     if (_isAnalyzing || _pendingRecognition != null) return;
@@ -109,6 +110,7 @@ class TransactionViewModel extends ChangeNotifier {
   Future<void> correctPrediction(
     ProductEntity selected, {
     String? correctionPhotoUri,
+    DateTime? correctionPhotoExpiresAt,
     bool consentToTraining = false,
   }) async {
     final pending = _pendingRecognition;
@@ -118,6 +120,7 @@ class TransactionViewModel extends ChangeNotifier {
       selected,
       corrected: selected.id != pending.product.id,
       correctionPhotoUri: correctionPhotoUri,
+      correctionPhotoExpiresAt: correctionPhotoExpiresAt,
       consentToTraining: consentToTraining,
     );
     addToCart(selected);
@@ -267,6 +270,7 @@ class TransactionViewModel extends ChangeNotifier {
     ProductEntity selected, {
     required bool corrected,
     String? correctionPhotoUri,
+    DateTime? correctionPhotoExpiresAt,
     bool consentToTraining = false,
   }) => _recognition.recordDecision(
     PredictionCorrection(
@@ -278,6 +282,7 @@ class TransactionViewModel extends ChangeNotifier {
       selectedProductId: selected.id,
       corrected: corrected,
       correctionPhotoUri: correctionPhotoUri,
+      correctionPhotoExpiresAt: correctionPhotoExpiresAt,
       modelVersion: pending.modelVersion,
       consentToTraining: consentToTraining,
     ),

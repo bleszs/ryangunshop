@@ -251,24 +251,69 @@ class DriftPredictionRepository implements PredictionRepository {
 
   @override
   Future<void> saveCorrection(PredictionCorrection correction) async {
-    await _database
-        .into(_database.predictions)
-        .insert(
-          PredictionsCompanion.insert(
-            id: _uuid.v4(),
-            storeId: correction.storeId,
-            capturedAt: correction.capturedAt,
-            aiLabel: Value(correction.initialLabel),
-            confidence: Value(correction.initialConfidence),
-            selectedProductId: Value(correction.selectedProductId),
-            corrected: correction.corrected,
-            correctionPhotoUri: Value(correction.correctionPhotoUri),
-            cashierId: correction.cashierId,
-            modelVersion: correction.modelVersion,
-            consentToTraining: Value(correction.consentToTraining),
-            updatedAt: _clock(),
-          ),
-        );
+    final predictionId = _uuid.v4();
+    final consentedPhoto = correction.consentToTraining
+        ? _nullIfBlank(correction.correctionPhotoUri)
+        : null;
+    final expiresAt = consentedPhoto == null
+        ? null
+        : correction.correctionPhotoExpiresAt;
+    if (consentedPhoto != null && expiresAt == null) {
+      throw ArgumentError(
+        'Foto koreksi yang disetujui harus memiliki batas retention.',
+      );
+    }
+    final selectedProductId = _nullIfBlank(correction.selectedProductId);
+    if (consentedPhoto != null && selectedProductId == null) {
+      throw ArgumentError(
+        'Foto koreksi harus memiliki produk pilihan sebagai label dataset.',
+      );
+    }
+    final now = _clock();
+    await _database.transaction(() async {
+      await _database
+          .into(_database.predictions)
+          .insert(
+            PredictionsCompanion.insert(
+              id: predictionId,
+              storeId: correction.storeId,
+              capturedAt: correction.capturedAt,
+              aiLabel: Value(correction.initialLabel),
+              confidence: Value(correction.initialConfidence),
+              selectedProductId: Value(correction.selectedProductId),
+              corrected: correction.corrected,
+              correctionPhotoUri: Value(consentedPhoto),
+              correctionPhotoExpiresAt: Value(expiresAt),
+              cashierId: correction.cashierId,
+              modelVersion: correction.modelVersion,
+              consentToTraining: Value(consentedPhoto != null),
+              updatedAt: now,
+            ),
+          );
+      if (consentedPhoto == null || expiresAt == null) return;
+      await _database
+          .into(_database.syncOutbox)
+          .insert(
+            SyncOutboxCompanion.insert(
+              id: _uuid.v4(),
+              storeId: correction.storeId,
+              aggregateType: 'predictionCorrection',
+              aggregateId: predictionId,
+              operation: 'uploadPhoto',
+              payloadJson: jsonEncode({
+                'predictionId': predictionId,
+                'storeId': correction.storeId,
+                'localPhotoPath': consentedPhoto,
+                'expiresAt': expiresAt.toUtc().toIso8601String(),
+                'selectedProductId': selectedProductId,
+                'modelVersion': correction.modelVersion,
+                'initialLabel': correction.initialLabel,
+                'initialConfidence': correction.initialConfidence,
+              }),
+              createdAt: now,
+            ),
+          );
+    });
   }
 }
 

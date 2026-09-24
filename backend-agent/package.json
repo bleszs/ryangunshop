@@ -11,8 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "test": "tsx --test src/**/*.test.ts",
-    "test:firebase:inside": "tsx --test src/firestore-rules.integration.test.ts",
-    "test:firebase": "firebase emulators:exec --config ../firebase.json --project demo-ryangunshop --only firestore \"npm run test:firebase:inside\"",
+    "test:firebase:inside": "tsx --test --test-concurrency=1 src/*-rules.integration.test.ts",
+    "test:firebase": "firebase emulators:exec --config ../firebase.json --project demo-ryangunshop --only firestore,storage \"npm run test:firebase:inside\"",
     "check": "npm run build && npm test"
   },
   "dependencies": {

@@ -111,6 +111,7 @@ class Predictions extends Table {
   TextColumn get selectedProductId => text().nullable()();
   BoolColumn get corrected => boolean()();
   TextColumn get correctionPhotoUri => text().nullable()();
+  DateTimeColumn get correctionPhotoExpiresAt => dateTime().nullable()();
   TextColumn get cashierId => text()();
   TextColumn get modelVersion => text()();
   BoolColumn get consentToTraining =>
@@ -236,7 +237,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -291,6 +292,18 @@ class AppDatabase extends _$AppDatabase {
         ).getSingleOrNull();
         if (productTable != null) {
           await migrator.addColumn(products, products.leadTimeDays);
+        }
+      }
+      if (from < 5) {
+        final predictionTable = await customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' "
+          "AND name = 'predictions'",
+        ).getSingleOrNull();
+        if (predictionTable != null) {
+          await migrator.addColumn(
+            predictions,
+            predictions.correctionPhotoExpiresAt,
+          );
         }
       }
     },
