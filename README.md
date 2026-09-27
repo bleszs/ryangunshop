@@ -72,6 +72,12 @@ Salin `.env.example` menjadi `.env`, lalu isi kredensial WhatsApp, Ollama, dan F
 Test Firebase memakai Local Emulator Suite, sedangkan alur agent/webhook memakai mock
 dan tidak mengirim pesan nyata.
 
+Panorama 360° disimpan lokal terlebih dahulu. Import, perubahan hotspot, dan hapus
+zona kemudian dikonsolidasikan menjadi satu event Drift outbox per zona. Gambar dan
+preview diunggah ke path tenant Firebase Storage yang deterministik, sementara nama
+zona serta hotspot disimpan di `stores/{storeId}/panoramaZones/{zoneId}`. Perubahan
+hotspot setelah upload hanya mengirim metadata dan tidak mengunggah ulang gambar besar.
+
 ### Foto koreksi privat
 
 Foto koreksi hanya diambil setelah consent eksplisit. Aplikasi menghapus EXIF/GPS,

@@ -6,7 +6,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, Timestamp, updateDoc } from "firebase/firestore";
 
 test("Firestore rules menjaga isolasi tenant dan batas akses kasir", {
   skip: !process.env.FIRESTORE_EMULATOR_HOST,
@@ -67,6 +67,35 @@ test("Firestore rules menjaga isolasi tenant dan batas akses kasir", {
       isLowStock: false,
       updatedAt: "cross-tenant",
     }));
+
+    const panorama = {
+      name: "Rak depan",
+      imageUri: "gs://demo/storePanoramas/store-a/zone-1/panorama.jpg",
+      thumbnailUri: "gs://demo/storePanoramas/store-a/zone-1/preview.jpg",
+      hotspots: [],
+      clientMutationId: "mutation-1",
+      clientUpdatedAt: Timestamp.fromDate(new Date("2026-09-27T08:00:00Z")),
+      updatedAt: Timestamp.fromDate(new Date("2026-09-27T08:00:01Z")),
+    };
+    await assertSucceeds(setDoc(
+      doc(ownerA, "stores/store-a/panoramaZones/zone-1"),
+      panorama,
+    ));
+    await assertSucceeds(getDoc(
+      doc(cashierA, "stores/store-a/panoramaZones/zone-1"),
+    ));
+    await assertFails(setDoc(
+      doc(cashierA, "stores/store-a/panoramaZones/zone-2"),
+      panorama,
+    ));
+    await assertFails(setDoc(
+      doc(ownerA, "stores/store-a/panoramaZones/zone-2"),
+      panorama,
+    ));
+    await assertFails(setDoc(
+      doc(ownerA, "stores/store-b/panoramaZones/zone-1"),
+      panorama,
+    ));
   } finally {
     await environment.cleanup();
   }

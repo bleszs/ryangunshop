@@ -55,8 +55,8 @@ Status: `[x]` fondasi tersedia, `[ ]` masih harus diimplementasikan/dikonfiguras
 
 - [x] Viewer foto equirectangular 360° lokal per zona, hotspot fixture, kompresi,
   cache privat, serta fallback preview hemat daya untuk perangkat kelas bawah.
-- [ ] Sinkronkan/upload foto panorama ke Firebase Storage setelah konfigurasi
-  Firebase aktif; metadata zona tetap tenant-scoped di Firestore.
+- [x] Antrekan upload/update/hapus panorama melalui Drift outbox ke Firebase
+  Storage; metadata zona dan hotspot tenant-scoped di Firestore.
 - [x] Buat struk PDF, simpan aman, dan share sheet ke WhatsApp (FR-08, FR-11).
 - [x] Dashboard omzet, laba kotor, produk terlaris/kurang laku, dan stok menipis (FR-09).
 - [x] Laporan PDF + CSV berdasarkan transaksi `success` untuk periode terpilih (FR-10, BR-04).

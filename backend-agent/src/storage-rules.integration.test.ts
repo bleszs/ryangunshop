@@ -98,6 +98,48 @@ test("Storage rules hanya menerima foto consent pada tenant pengguna", {
         },
       },
     ));
+
+    const ownerA = environment.authenticatedContext("owner-a", {
+      storeId: "store-a",
+      role: "OWNER",
+      active: true,
+    }).storage();
+    const panoramaMetadata = {
+      contentType: "image/jpeg",
+      customMetadata: {
+        storeId: "store-a",
+        zoneId: "zone-1",
+        kind: "panorama",
+      },
+    };
+    const panoramaRef = ref(
+      ownerA,
+      "storePanoramas/store-a/zone-1/panorama.jpg",
+    );
+    await assertSucceeds(uploadBytes(panoramaRef, jpeg, panoramaMetadata));
+    await assertSucceeds(getBytes(panoramaRef));
+    await assertFails(uploadBytes(
+      ref(cashierA, "storePanoramas/store-a/zone-2/panorama.jpg"),
+      jpeg,
+      {
+        ...panoramaMetadata,
+        customMetadata: {
+          ...panoramaMetadata.customMetadata,
+          zoneId: "zone-2",
+        },
+      },
+    ));
+    await assertFails(uploadBytes(
+      ref(ownerA, "storePanoramas/store-b/zone-1/panorama.jpg"),
+      jpeg,
+      {
+        ...panoramaMetadata,
+        customMetadata: {
+          ...panoramaMetadata.customMetadata,
+          storeId: "store-b",
+        },
+      },
+    ));
   } finally {
     await environment.cleanup();
   }

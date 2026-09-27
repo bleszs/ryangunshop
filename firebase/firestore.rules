@@ -59,6 +59,38 @@ service cloud.firestore {
         }
       }
 
+      match /panoramaZones/{zoneId} {
+        allow read: if belongsToStore(storeId);
+        allow create, update: if isOwner(storeId)
+          && request.resource.data.keys().hasOnly([
+            'name',
+            'imageUri',
+            'thumbnailUri',
+            'hotspots',
+            'clientMutationId',
+            'clientUpdatedAt',
+            'updatedAt'
+          ])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.imageUri is string
+          && request.resource.data.imageUri.matches(
+            '^gs://[^/]+/storePanoramas/' + storeId + '/' + zoneId
+              + '/panorama\\.jpg$'
+          )
+          && request.resource.data.thumbnailUri is string
+          && request.resource.data.thumbnailUri.matches(
+            '^gs://[^/]+/storePanoramas/' + storeId + '/' + zoneId
+              + '/preview\\.jpg$'
+          )
+          && request.resource.data.hotspots is list
+          && request.resource.data.clientMutationId is string
+          && request.resource.data.clientUpdatedAt is timestamp
+          && request.resource.data.updatedAt is timestamp;
+        allow delete: if isOwner(storeId);
+      }
+
       match /transactions/{transactionId} {
         allow read: if belongsToStore(storeId);
         allow create: if belongsToStore(storeId)

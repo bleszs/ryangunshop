@@ -13,6 +13,7 @@ import 'data/repositories/drift_repositories.dart';
 import 'data/repositories/drift_sales_report_repository.dart';
 import 'data/repositories/drift_transaction_management_repository.dart';
 import 'data/repositories/local_panorama_repository.dart';
+import 'data/repositories/syncing_panorama_repository.dart';
 import 'data/sync/outbox_background_worker.dart';
 import 'di/app_container.dart';
 import 'domain/repositories/repositories.dart';
@@ -44,7 +45,11 @@ Future<void> main() async {
       transactionManagementRepository: DriftTransactionManagementRepository(
         container.database,
       ),
-      panoramaRepository: LocalPanoramaRepository(),
+      panoramaRepository: SyncingPanoramaRepository(
+        local: LocalPanoramaRepository(),
+        database: container.database,
+        shouldSync: (storeId) => storeId != 'local-preview-store',
+      ),
       productRepository: container.products,
       inventoryPlanningRepository: DriftInventoryPlanningRepository(
         container.database,

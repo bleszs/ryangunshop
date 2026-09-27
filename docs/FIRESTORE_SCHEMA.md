@@ -6,6 +6,7 @@ stores/{storeId}
   inventoryMutations/{mutationId}
   layouts/{layoutId}
     fixtures/{fixtureId}
+  panoramaZones/{zoneId}
   transactions/{transactionId}
   predictions/{predictionId}
   reportJobs/{jobId}
@@ -48,6 +49,15 @@ Subcollection `fixtures` berisi `type`, `label`, koordinat relatif `x`/`y`, `wid
 `clientUpdatedAt`, dan `updatedAt`. Sinkronisasi upsert juga menghapus dokumen fixture remote
 yang sudah tidak ada pada snapshot lokal sehingga hasil retry tetap idempoten.
 Klien membaca layout milik `storeId` dari claim sesi; hanya role owner yang boleh menulis.
+
+### panoramaZones
+
+Metadata zona 360° berisi `name`, URI `gs://` untuk gambar utama dan preview,
+`hotspots[]` (`fixtureId`, `longitude`, `latitude`), `clientMutationId`,
+`clientUpdatedAt`, dan `updatedAt`. Gambar berada pada path deterministik
+`storePanoramas/{storeId}/{zoneId}/`, sehingga retry bersifat idempoten. Semua role
+aktif dalam tenant boleh membaca; hanya owner tenant yang boleh membuat, mengubah,
+atau menghapus zona dan objek Storage.
 
 ### predictions
 

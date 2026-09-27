@@ -11,7 +11,9 @@ import '../../core/security/firebase_app_security.dart';
 import '../local/app_database.dart';
 import '../remote/firestore_catalog_data_source.dart';
 import '../remote/firebase_correction_photo_data_source.dart';
+import '../remote/firebase_panorama_data_source.dart';
 import 'inventory_stock_outbox_sync.dart';
+import 'panorama_outbox_sync.dart';
 import 'product_catalog_outbox_sync.dart';
 import 'prediction_correction_photo_outbox_sync.dart';
 import 'store_layout_outbox_sync.dart';
@@ -93,6 +95,13 @@ void outboxCallbackDispatcher() {
       await PredictionCorrectionPhotoOutboxSyncProcessor(
         database: database,
         remote: FirebaseCorrectionPhotoDataSource(FirebaseStorage.instance),
+      ).processPending();
+      await PanoramaOutboxSyncProcessor(
+        database: database,
+        remote: FirebasePanoramaDataSource(
+          firestore: FirebaseFirestore.instance,
+          storage: FirebaseStorage.instance,
+        ),
       ).processPending();
       return true;
     } on Object {

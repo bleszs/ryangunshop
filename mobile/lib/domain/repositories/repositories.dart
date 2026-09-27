@@ -164,6 +164,21 @@ class EmptyPanoramaRepository implements PanoramaRepository {
   Future<void> saveZone(PanoramaZoneEntity zone) async {}
 }
 
+/// Port remote panorama. Path object diturunkan dari store/zone agar idempoten.
+abstract interface class PanoramaRemoteRepository {
+  Future<void> upsertPanoramaZone(
+    PanoramaZoneEntity zone, {
+    required String mutationId,
+    required bool uploadRequired,
+  });
+
+  Future<void> deletePanoramaZone({
+    required String storeId,
+    required String zoneId,
+    required String mutationId,
+  });
+}
+
 /// Port remote untuk sinkronisasi denah. Implementasi harus idempotent terhadap
 /// [mutationId] karena event outbox dapat dikirim ulang setelah timeout.
 abstract interface class StoreLayoutRemoteRepository {

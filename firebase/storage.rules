@@ -7,6 +7,11 @@ service firebase.storage {
         && request.auth.token.storeId == storeId;
     }
 
+    function isOwner(storeId) {
+      return belongsToStore(storeId)
+        && request.auth.token.role == 'OWNER';
+    }
+
     match /predictionCorrections/{storeId}/{fileName} {
       allow create: if belongsToStore(storeId)
         && fileName.matches('^[A-Za-z0-9_-]+\\.jpg$')
@@ -29,6 +34,33 @@ service firebase.storage {
 
       // Dataset hanya dibaca/dihapus oleh backend Admin SDK yang diaudit.
       allow read, update, delete: if false;
+    }
+
+    match /storePanoramas/{storeId}/{zoneId}/{fileName} {
+      allow read: if belongsToStore(storeId);
+      allow create, update: if isOwner(storeId)
+        && (fileName == 'panorama.jpg' || fileName == 'preview.jpg')
+        && (
+          (fileName == 'panorama.jpg'
+            && request.resource.size < 20 * 1024 * 1024)
+          || (fileName == 'preview.jpg'
+            && request.resource.size < 2 * 1024 * 1024)
+        )
+        && request.resource.contentType == 'image/jpeg'
+        && request.resource.metadata.keys().hasAll([
+          'storeId',
+          'zoneId',
+          'kind'
+        ])
+        && request.resource.metadata.storeId == storeId
+        && request.resource.metadata.zoneId == zoneId
+        && (
+          (fileName == 'panorama.jpg'
+            && request.resource.metadata.kind == 'panorama')
+          || (fileName == 'preview.jpg'
+            && request.resource.metadata.kind == 'preview')
+        );
+      allow delete: if isOwner(storeId);
     }
 
     match /{allPaths=**} {
