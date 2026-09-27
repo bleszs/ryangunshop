@@ -23,6 +23,9 @@ backend-agent/.env
 # Local assets and reports
 .artifacts/
 mobile/assets/models/*.tflite
+!mobile/assets/models/product_classifier.tflite
+ml/dataset/**
+!ml/dataset/README.md
 /reports/
 *.keystore
 *.jks

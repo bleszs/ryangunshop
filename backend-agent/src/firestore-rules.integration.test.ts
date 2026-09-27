@@ -103,6 +103,13 @@ test("Firestore rules menjaga isolasi tenant dan batas akses kasir", {
     await assertFails(getDoc(
       doc(ownerA, "whatsappDeadLetters/job-client-forbidden"),
     ));
+    await assertFails(setDoc(
+      doc(ownerA, "paymentOrders/RG-client-forbidden"),
+      { grossAmount: 1, status: "SETTLED" },
+    ));
+    await assertFails(getDoc(
+      doc(ownerA, "paymentNotifications/event-client-forbidden"),
+    ));
   } finally {
     await environment.cleanup();
   }

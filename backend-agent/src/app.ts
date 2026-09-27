@@ -6,11 +6,22 @@ import {
   registerWhatsAppRoutes,
 } from "./whatsapp.js";
 import type { DurableWhatsAppQueue } from "./whatsapp-queue.js";
+import {
+  registerPaymentRoutes,
+  type FirestorePaymentRepository,
+  type PaymentService,
+} from "./payments.js";
+import type { App } from "firebase-admin/app";
 
 export interface HttpAppDependencies {
   config: AppConfig;
   queue: Pick<DurableWhatsAppQueue, "enqueue">;
   log: Logger;
+  payment?: {
+    firebaseApp: App;
+    service: PaymentService;
+    repository: FirestorePaymentRepository;
+  };
 }
 
 export function createHttpApp(dependencies: HttpAppDependencies): Express {
@@ -34,6 +45,14 @@ export function createHttpApp(dependencies: HttpAppDependencies): Express {
     queue,
     log,
   });
+  if (dependencies.payment) {
+    registerPaymentRoutes(app, {
+      firebaseApp: dependencies.payment.firebaseApp,
+      payments: dependencies.payment.service,
+      repository: dependencies.payment.repository,
+      log,
+    });
+  }
 
   app.use((_request, response) => response.sendStatus(404));
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {

@@ -16,6 +16,8 @@ const schema = z.object({
   OLLAMA_HOST: z.url(),
   OLLAMA_MODEL: z.string().min(1),
   FIREBASE_PROJECT_ID: z.string().min(1),
+  MIDTRANS_SERVER_KEY: z.string().min(10).optional(),
+  MIDTRANS_IS_PRODUCTION: z.stringbool().default(false),
 });
 
 export type AppConfig = z.infer<typeof schema>;

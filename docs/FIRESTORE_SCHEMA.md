@@ -15,7 +15,15 @@ stores/{storeId}
 whatsappUsers/{e164Phone}
 whatsappJobs/{sha256MessageId}
 whatsappDeadLetters/{sha256MessageId}
+paymentOrders/{deterministicOrderId}
+paymentNotifications/{sha256GatewayEvent}
 ```
+
+`paymentOrders` dan `paymentNotifications` hanya ditulis/dibaca backend Admin SDK.
+Order ID deterministik dari tenant, kasir, dan `clientRequestId` membuat permintaan QRIS
+aman diulang. Harga dan stok selalu dibaca ulang dari `stores/{storeId}/products`; klien
+tidak menjadi sumber nominal. Notifikasi gateway dideduplikasi sebelum transaksi dan
+pengurangan stok diselesaikan secara atomik.
 
 `whatsappUsers` berisi `storeId`, `userId`, `role`, dan `active`. Dokumen ini hanya boleh
 dibaca backend Admin SDK. Password tidak pernah disimpan di Firestore; gunakan Firebase Auth.

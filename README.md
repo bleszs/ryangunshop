@@ -45,15 +45,18 @@ flutter test
 flutter run
 ```
 
-Sebelum mengaktifkan kamera AI:
+Repository menyertakan MobileNetV2 ImageNet sebagai **baseline benchmark**, bukan model
+SKU warung. Manifestnya bertanda `productionReady: false`, sehingga build normal menolak
+model tersebut dan otomatis memakai barcode/pencarian manual. Jalankan benchmark eksplisit:
 
-1. Tambahkan model float32 `[1,H,W,3]` ke
-   `mobile/assets/models/product_classifier.tflite`.
-2. Isi `mobile/assets/models/labels.txt`, satu label per baris.
-3. Daftarkan asset model di `mobile/pubspec.yaml`.
-4. Kalibrasi normalisasi input dan confidence threshold pada perangkat target.
+```bash
+flutter test integration_test/model_benchmark_test.dart -d DEVICE_ID \
+  --dart-define=RYANGUNSHOP_ENABLE_BASELINE_MODEL=true
+```
 
-Classifier dibuat lazy sehingga aplikasi dasar tetap dapat dibuka tanpa model/Firebase.
+Dataset foto privat, quality gate, training, kalibrasi threshold, dan ekspor TFLite
+terdokumentasi di `ml/README.md`. Model SKU baru aktif bila manifest hasil training
+bertanda `productionReady: true`.
 
 Dokumen keputusan dashboard terdapat di [PRODUCT.md](PRODUCT.md),
 [DESIGN.md](DESIGN.md), serta
@@ -71,6 +74,12 @@ npm run test:firebase
 Salin `.env.example` menjadi `.env`, lalu isi kredensial WhatsApp, Ollama, dan Firebase.
 Test Firebase memakai Local Emulator Suite, sedangkan alur agent/webhook memakai mock
 dan tidak mengirim pesan nyata.
+
+QRIS dinamis memakai Midtrans Core API. Backend menghitung ulang harga dari Firestore,
+menyimpan payment order idempoten, memverifikasi `signature_key`, mengecek ulang status
+ke Midtrans, lalu mengurangi stok dan membuat transaksi dalam satu Firestore transaction.
+Server key hanya berasal dari environment backend. Aktivasi merchant sandbox dan wiring
+mobile tetap memerlukan akun merchant; lihat `docs/PRODUCTION_SETUP.md`.
 
 Webhook WhatsApp menggunakan antrean durable Firestore. HTTP 200 hanya dikirim setelah
 job tersimpan idempoten berdasarkan hash message ID. Worker memakai lease, exponential

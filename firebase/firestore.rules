@@ -136,5 +136,14 @@ service cloud.firestore {
     match /whatsappDeadLetters/{jobId} {
       allow read, write: if false;
     }
+
+    // Order dan event QRIS bersifat backend-only; nominal tidak boleh diubah client.
+    match /paymentOrders/{orderId} {
+      allow read, write: if false;
+    }
+
+    match /paymentNotifications/{eventId} {
+      allow read, write: if false;
+    }
   }
 }

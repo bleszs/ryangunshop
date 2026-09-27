@@ -4,6 +4,7 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 
 import '../../domain/entities/entities.dart';
 import '../../domain/repositories/repositories.dart';
+import 'product_model_manifest.dart';
 
 class TfliteProductClassifier implements ProductClassifier {
   TfliteProductClassifier._({
@@ -12,6 +13,7 @@ class TfliteProductClassifier implements ProductClassifier {
     required this.modelVersion,
     required this.inputMean,
     required this.inputStd,
+    required this.recommendedThreshold,
   }) : _interpreter = interpreter,
        _labels = labels;
 
@@ -20,49 +22,63 @@ class TfliteProductClassifier implements ProductClassifier {
   final String modelVersion;
   final double inputMean;
   final double inputStd;
+  final double recommendedThreshold;
 
   static Future<TfliteProductClassifier> load({
-    String modelAsset = 'assets/models/product_classifier.tflite',
-    String labelsAsset = 'assets/models/labels.txt',
-    String modelVersion = 'product-classifier-v1',
-    double inputMean = 0,
-    double inputStd = 255,
+    String manifestAsset = 'assets/models/product_classifier.manifest.json',
+    bool allowUncalibratedModel = false,
   }) async {
-    final interpreter = await Interpreter.fromAsset(modelAsset);
-    final labelsText = await rootBundle.loadString(labelsAsset);
+    final manifest = await ProductModelManifest.load(asset: manifestAsset);
+    if (!manifest.productionReady && !allowUncalibratedModel) {
+      throw StateError(
+        'Model hanya untuk benchmark dan belum lolos kalibrasi SKU produksi.',
+      );
+    }
+    final options = InterpreterOptions()..threads = 2;
+    final interpreter = await Interpreter.fromAsset(
+      manifest.modelAsset,
+      options: options,
+    );
+    final labelsText = await rootBundle.loadString(manifest.labelsAsset);
     final labels = labelsText
         .split(RegExp(r'\r?\n'))
         .map((line) => line.trim())
         .where((line) => line.isNotEmpty && !line.startsWith('#'))
         .toList(growable: false);
     if (labels.isEmpty) throw StateError('Label model belum tersedia');
+    final input = interpreter.getInputTensor(0);
+    final output = interpreter.getOutputTensor(0);
+    if (input.type != TensorType.float32 ||
+        input.shape.length != 4 ||
+        input.shape[0] != 1 ||
+        input.shape[1] != manifest.inputHeight ||
+        input.shape[2] != manifest.inputWidth ||
+        input.shape[3] != 3) {
+      interpreter.close();
+      throw StateError('Tensor input tidak sesuai manifest model.');
+    }
+    if (output.shape.length != 2 ||
+        output.shape[0] != 1 ||
+        output.shape[1] != labels.length ||
+        labels.length != manifest.labelCount) {
+      interpreter.close();
+      throw StateError('Tensor output dan labels tidak konsisten.');
+    }
     return TfliteProductClassifier._(
       interpreter: interpreter,
       labels: labels,
-      modelVersion: modelVersion,
-      inputMean: inputMean,
-      inputStd: inputStd,
+      modelVersion: manifest.modelVersion,
+      inputMean: manifest.inputMean,
+      inputStd: manifest.inputStd,
+      recommendedThreshold: manifest.recommendedThreshold,
     );
   }
 
   @override
   Future<ClassificationResult> classify(RgbFrame frame) async {
     final stopwatch = Stopwatch()..start();
-    final inputTensor = _interpreter.getInputTensor(0);
-    final outputTensor = _interpreter.getOutputTensor(0);
-    final inputShape = inputTensor.shape;
-    final outputShape = outputTensor.shape;
-    if (inputTensor.type != TensorType.float32 ||
-        inputShape.length != 4 ||
-        inputShape[0] != 1 ||
-        inputShape[3] != 3) {
-      throw StateError(
-        'Fondasi classifier mengharuskan model float32 [1,H,W,3]',
-      );
-    }
-    if (outputShape.length != 2 || outputShape[0] != 1) {
-      throw StateError('Output model harus berbentuk [1,jumlahLabel]');
-    }
+    final inputShape = _interpreter.getInputTensor(0).shape;
+    final outputShape = _interpreter.getOutputTensor(0).shape;
 
     var source = image_lib.Image.fromBytes(
       width: frame.width,

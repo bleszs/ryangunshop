@@ -13,6 +13,7 @@
     "test": "tsx --test src/**/*.test.ts",
     "test:firebase:inside": "tsx --test --test-concurrency=1 src/*-rules.integration.test.ts",
     "test:firebase": "firebase emulators:exec --config ../firebase.json --project demo-ryangunshop --only firestore,storage \"npm run test:firebase:inside\"",
+    "provision:owner": "node scripts/provision-owner.mjs",
     "check": "npm run build && npm test"
   },
   "dependencies": {

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "mobilenet-v2-imagenet-baseline-v1",
+  "architecture": "MobileNetV2 1.0 224 float32",
+  "modelAsset": "assets/models/product_classifier.tflite",
+  "labelsAsset": "assets/models/labels.txt",
+  "modelSha256": "ff5cb7f9e62c92ebdad971f8a98aa6b3106d82a64587a7787c6a385c9e791339",
+  "labelsSha256": "536feacc519de3d418de26b2effb4d75694a8c4c0063e36499a46fa8061e2da9",
+  "inputWidth": 224,
+  "inputHeight": 224,
+  "inputMean": 127.5,
+  "inputStd": 127.5,
+  "labelCount": 1001,
+  "recommendedThreshold": 0.8,
+  "productionReady": false,
+  "purpose": "Baseline ImageNet untuk smoke test dan benchmark perangkat; bukan klasifikasi SKU warung.",
+  "source": "https://tfhub.dev/tensorflow/lite-model/mobilenet_v2_1.0_224/1/metadata/1?lite-format=tflite"
+}

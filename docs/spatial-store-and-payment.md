@@ -33,16 +33,16 @@ sinkronkan dokumen tenant-scoped ke `stores/{storeId}/layouts/{layoutId}`.
 
 ```text
 Flutter checkout
-  -> POST /payments/qris {transactionId, amount}
-  -> Backend memverifikasi storeId + total transaksi
-  -> Payment gateway membuat dynamic QR untuk merchant terdaftar
-  <- qrPayload + expiresAt + providerReference
+  -> POST /payments/qris {clientRequestId, items[]}
+  -> Backend memverifikasi Firebase ID token dan menghitung ulang harga Firestore
+  -> Midtrans Core API membuat QR dinamis untuk merchant terdaftar
+  <- orderId + qrUrl + expiresAt + status
 
-Payment gateway
-  -> POST /webhooks/payment
-  -> Backend memverifikasi signature + nominal + merchant + idempotency
-  -> status payment = paid
-  -> finalisasi transaksi dan outbox sinkronisasi
+Midtrans
+  -> POST /webhooks/midtrans
+  -> Backend memverifikasi signature lalu GET status ke Midtrans
+  -> event ID dan order ID dideduplikasi
+  -> finalisasi transaksi + pengurangan stok dalam Firestore transaction
   -> aplikasi menerima update/polling
 ```
 
@@ -51,11 +51,13 @@ Nominal berubah mengikuti transaksi. QR tidak boleh dibangkitkan hanya dengan
 menempelkan nominal ke gambar QR statis, dan status tidak boleh dipercaya dari
 tombol “sudah bayar” di perangkat.
 
-## Keputusan yang Masih Perlu Dipilih
+## Keputusan Produksi
 
-- Payment gateway/acquirer QRIS yang digunakan dan dukungan sandbox-nya.
-- Cara membuat denah awal: template manual, foto denah sebagai acuan, atau wizard
-  pengukuran sederhana.
-- Siapa yang boleh mengedit layout: hanya owner atau owner + kasir tertentu.
-- Apakah panorama disimpan di Firebase Storage atau object storage terpisah.
+- Gateway QRIS: Midtrans Core API, dimulai dari sandbox.
+- Denah awal: template manual yang dapat diubah owner.
+- Hak edit layout: hanya role `OWNER`.
+- Panorama: Firebase Storage region Jakarta (`asia-southeast2`), mengikuti Firestore.
 
+QRIS manual tetap menjadi fallback ketika internet/backend/gateway tidak tersedia, tetapi
+kasir wajib memeriksa mutasi secara manual. Aplikasi tidak boleh menganggap pembayaran
+berhasil hanya karena QR telah ditampilkan.

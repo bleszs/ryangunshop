@@ -9,6 +9,8 @@ import { ToolRegistry } from "./tool-registry.js";
 import { FirestoreWhatsAppQueue } from "./whatsapp-queue.js";
 import { sendWhatsAppText } from "./whatsapp.js";
 import { WhatsAppQueueWorker } from "./whatsapp-worker.js";
+import { MidtransClient } from "./midtrans.js";
+import { FirestorePaymentRepository, PaymentService } from "./payments.js";
 
 const config = loadConfig();
 const log = pino({ level: config.LOG_LEVEL });
@@ -28,7 +30,23 @@ const worker = new WhatsAppQueueWorker({
   sendText: sendWhatsAppText,
   log,
 });
-const app = createHttpApp({ config, queue, log });
+const paymentRepository = config.MIDTRANS_SERVER_KEY
+  ? new FirestorePaymentRepository(firestore)
+  : undefined;
+const paymentService = config.MIDTRANS_SERVER_KEY && paymentRepository
+  ? new PaymentService(
+      paymentRepository,
+      new MidtransClient(config.MIDTRANS_SERVER_KEY, config.MIDTRANS_IS_PRODUCTION),
+    )
+  : undefined;
+const app = createHttpApp({
+  config,
+  queue,
+  log,
+  ...(paymentService && paymentRepository
+    ? { payment: { firebaseApp, service: paymentService, repository: paymentRepository } }
+    : {}),
+});
 
 const server = app.listen(config.PORT, () => {
   log.info({ port: config.PORT }, "RyanGunshop agent listening");

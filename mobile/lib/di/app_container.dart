@@ -23,6 +23,9 @@ class AppContainer {
     required String cashierId,
   }) async {
     final classifier = await _loadClassifier();
+    final threshold = classifier is TfliteProductClassifier
+        ? classifier.recommendedThreshold
+        : 0.65;
     final predictions = DriftPredictionRepository(database);
     return TransactionViewModel(
       storeId: storeId,
@@ -31,6 +34,7 @@ class AppContainer {
         classifier: classifier,
         products: products,
         predictions: predictions,
+        threshold: threshold,
       ),
       barcodeScanner: MlKitBarcodeScanner(),
       products: products,
@@ -40,7 +44,11 @@ class AppContainer {
 
   Future<ProductClassifier> _loadClassifier() async {
     try {
-      return await TfliteProductClassifier.load();
+      return await TfliteProductClassifier.load(
+        allowUncalibratedModel: const bool.fromEnvironment(
+          'RYANGUNSHOP_ENABLE_BASELINE_MODEL',
+        ),
+      );
     } catch (_) {
       return const UnavailableProductClassifier();
     }

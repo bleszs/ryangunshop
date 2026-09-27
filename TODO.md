@@ -34,19 +34,26 @@ Status: `[x]` fondasi tersedia, `[ ]` masih harus diimplementasikan/dikonfiguras
 - [x] Proses outbox layout ke Firestore, tandai `synced`, dan terapkan retry/backoff.
 - [x] Lengkapi editor: resize, rename, duplicate/delete, undo, template awal,
   tautkan produk, serta pembatasan edit khusus owner.
-- [ ] Masukkan `product_classifier.tflite` + labels dan kalibrasi normalisasi/threshold pada perangkat target (NFR-01, NFR-05).
+- [x] Masukkan baseline `product_classifier.tflite` + 1.001 label, manifest/checksum,
+  contract test, dan benchmark inferensi nyata di emulator; baseline diblokir pada build
+  normal karena bukan model SKU (NFR-01, NFR-05).
+- [ ] Kumpulkan dataset foto produk privat, latih model SKU, lalu loloskan quality gate
+  accuracy/precision/coverage agar manifest menjadi `productionReady: true`.
 - [x] Aktifkan Firebase Auth, deploy rules/index, dan verifikasi koneksi
   Firestore beserta isolasi lintas tenant pada proyek
   `ryangunshop-pos-2026` (FR-01–02).
 - [x] Buat login serta session `storeId` dari custom claims, bukan input pengguna
   (FR-01, NFR-02).
-- [ ] Buat akun owner produksi pertama dan tetapkan custom claims `storeId`,
-  `role: OWNER`, serta `active: true` setelah kredensial ditentukan pemilik.
+- [x] Buat owner produksi pertama untuk tenant `warung-utama`, tetapkan custom claims
+  `storeId`, `role: OWNER`, `active: true`, dan kirim alur reset kata sandi Firebase.
 - [x] Buat layar CRUD produk termasuk barcode unik, foto, stok minimum, dan lokasi rak (FR-02).
 - [x] Hubungkan preview kamera, permission, lifecycle, overlay area panduan, dan ViewModel (FR-03–04).
 - [x] Buat layar keranjang/pembayaran tunai dan konfirmasi QRIS manual (FR-06–07).
-- [ ] Pilih payment gateway QRIS, aktifkan merchant sandbox, lalu implementasikan
-  dynamic QR + signature webhook + idempotency + status expiry/refund.
+- [x] Pilih Midtrans Core API dan implementasikan fondasi dynamic QR backend: hitung ulang
+  harga, Firebase token/tenant check, signature + status recheck, idempotency, settlement
+  atomik, expiry/cancel/refund state, dan fallback QRIS manual.
+- [ ] Aktifkan merchant Midtrans sandbox, isi server key, pasang notification URL, lalu
+  hubungkan QR/polling ke layar pembayaran Flutter dan jalankan skenario sandbox end-to-end.
 - [x] Tambahkan SQLite migration test untuk tabel denah dan outbox.
 - [x] Tambahkan integration test rollback stok (NFR-03).
 - [x] Implementasikan outbox WorkManager-equivalent (`workmanager`) dan resolusi konflik stok.
@@ -67,7 +74,10 @@ Status: `[x]` fondasi tersedia, `[ ]` masih harus diimplementasikan/dikonfiguras
   daftarkan App Check debug token emulator tanpa menyimpannya di repository.
 - [ ] Kirim satu test crash build internal, pantau metrik App Check, lalu aktifkan
   enforcement Firestore/Storage setelah request sah sudah stabil.
-- [ ] Benchmark halaman transaksi <3 detik dan inferensi <5 detik di perangkat kelas bawah (NFR-01).
+- [x] Benchmark inferensi baseline di emulator Android: p50 188 ms, p95/maks 872 ms
+  (10 sampel setelah warm-up), di bawah batas 5 detik.
+- [ ] Benchmark cold/warm halaman transaksi <3 detik dan ulangi inferensi pada perangkat
+  Android kelas bawah fisik (NFR-01).
 
 ## P2 — Prediksi dan agent
 
