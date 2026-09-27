@@ -16,8 +16,9 @@ test("hanya mengekstrak pesan teks yang valid", () => {
     entry: [{ changes: [{ value: { messages: [
       { id: "wamid.1", from: "62812", text: { body: "cek stok Aqua" } },
       { id: "wamid.2", from: "62812", type: "image" },
+      { id: "wamid.3", from: "62812", text: { body: "x".repeat(4_097) } },
+      { id: "x".repeat(513), from: "62812", text: { body: "terlalu panjang" } },
     ] } }] }],
   });
   assert.deepEqual(result, [{ id: "wamid.1", from: "62812", text: "cek stok Aqua" }]);
 });
-

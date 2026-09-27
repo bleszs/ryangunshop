@@ -13,10 +13,18 @@ stores/{storeId}
   agentActions/{actionId}
 
 whatsappUsers/{e164Phone}
+whatsappJobs/{sha256MessageId}
+whatsappDeadLetters/{sha256MessageId}
 ```
 
 `whatsappUsers` berisi `storeId`, `userId`, `role`, dan `active`. Dokumen ini hanya boleh
 dibaca backend Admin SDK. Password tidak pernah disimpan di Firestore; gunakan Firebase Auth.
+
+`whatsappJobs` adalah antrean Admin-only dengan status `PENDING`, `PROCESSING`,
+`COMPLETED`, atau `DEAD_LETTER`. Field pentingnya `externalMessageId`, `from`, `text`,
+`attemptCount`, `availableAt`, `leaseOwner`, `leaseUntil`, dan `expiresAt`. Webhook
+Meta baru di-ACK setelah dokumen dibuat; hash message ID mencegah duplikat. Setelah
+batas retry, snapshot job disalin ke `whatsappDeadLetters` untuk inspeksi/replay manual.
 
 ### products
 

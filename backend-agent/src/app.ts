@@ -4,22 +4,17 @@ import { pinoHttp } from "pino-http";
 import type { AppConfig } from "./config.js";
 import {
   registerWhatsAppRoutes,
-  type WhatsAppAgent,
-  type WhatsAppStore,
-  type WhatsAppTextSender,
 } from "./whatsapp.js";
+import type { DurableWhatsAppQueue } from "./whatsapp-queue.js";
 
 export interface HttpAppDependencies {
   config: AppConfig;
-  store: WhatsAppStore;
-  agent: WhatsAppAgent;
+  queue: Pick<DurableWhatsAppQueue, "enqueue">;
   log: Logger;
-  sendText?: WhatsAppTextSender;
-  schedule?: (work: Promise<void>) => void;
 }
 
 export function createHttpApp(dependencies: HttpAppDependencies): Express {
-  const { config, store, agent, log, sendText, schedule } = dependencies;
+  const { config, queue, log } = dependencies;
   const app = express();
 
   app.disable("x-powered-by");
@@ -36,11 +31,8 @@ export function createHttpApp(dependencies: HttpAppDependencies): Express {
   });
   registerWhatsAppRoutes(app, {
     config,
-    store,
-    agent,
+    queue,
     log,
-    ...(sendText ? { sendText } : {}),
-    ...(schedule ? { schedule } : {}),
   });
 
   app.use((_request, response) => response.sendStatus(404));

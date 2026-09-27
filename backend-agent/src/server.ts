@@ -6,6 +6,9 @@ import { createHttpApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { FirestoreStoreRepository } from "./firestore-store.js";
 import { ToolRegistry } from "./tool-registry.js";
+import { FirestoreWhatsAppQueue } from "./whatsapp-queue.js";
+import { sendWhatsAppText } from "./whatsapp.js";
+import { WhatsAppQueueWorker } from "./whatsapp-worker.js";
 
 const config = loadConfig();
 const log = pino({ level: config.LOG_LEVEL });
@@ -16,8 +19,38 @@ firestore.settings({ ignoreUndefinedProperties: true });
 const store = new FirestoreStoreRepository(firestore);
 const registry = new ToolRegistry(store);
 const agent = new AgentService(config.OLLAMA_HOST, config.OLLAMA_MODEL, registry);
-const app = createHttpApp({ config, store, agent, log });
+const queue = new FirestoreWhatsAppQueue(firestore);
+const worker = new WhatsAppQueueWorker({
+  config,
+  queue,
+  store,
+  agent,
+  sendText: sendWhatsAppText,
+  log,
+});
+const app = createHttpApp({ config, queue, log });
 
-app.listen(config.PORT, () => {
+const server = app.listen(config.PORT, () => {
   log.info({ port: config.PORT }, "RyanGunshop agent listening");
 });
+
+const poll = () => {
+  void worker.processBatch().catch((error) => {
+    log.error({ error }, "Worker antrean WhatsApp gagal");
+  });
+};
+const pollTimer = setInterval(poll, config.WHATSAPP_QUEUE_POLL_MS);
+pollTimer.unref();
+poll();
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => {
+    clearInterval(pollTimer);
+    server.close((error) => {
+      if (error) {
+        log.error({ error }, "Gagal menutup server");
+        process.exitCode = 1;
+      }
+    });
+  });
+}

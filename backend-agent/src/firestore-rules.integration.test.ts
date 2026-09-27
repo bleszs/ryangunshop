@@ -96,6 +96,13 @@ test("Firestore rules menjaga isolasi tenant dan batas akses kasir", {
       doc(ownerA, "stores/store-b/panoramaZones/zone-1"),
       panorama,
     ));
+    await assertFails(setDoc(
+      doc(ownerA, "whatsappJobs/job-client-forbidden"),
+      { status: "PENDING" },
+    ));
+    await assertFails(getDoc(
+      doc(ownerA, "whatsappDeadLetters/job-client-forbidden"),
+    ));
   } finally {
     await environment.cleanup();
   }

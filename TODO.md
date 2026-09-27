@@ -79,7 +79,8 @@ Status: `[x]` fondasi tersedia, `[ ]` masih harus diimplementasikan/dikonfiguras
   `firebase/storage.lifecycle.json`, lalu lakukan smoke test upload produksi.
 - [ ] Deploy backend/Ollama private network + TLS + health monitoring 24/7 (NFR-08).
 - [ ] Konfigurasi webhook Meta serta `whatsappUsers` whitelist (FR-15).
-- [ ] Pindahkan proses webhook ke queue durable dan dead-letter queue.
+- [x] Pindahkan proses webhook ke antrean durable Firestore dengan lease,
+  exponential backoff, deduplikasi message ID, dan dead-letter queue.
 - [ ] Worker laporan + signed URL singkat untuk tool `generateReport`.
 - [ ] Flow confirmation token dua langkah sebelum tool mutasi ditambahkan.
 - [x] Integration test Firebase Emulator + mock Ollama/WhatsApp.

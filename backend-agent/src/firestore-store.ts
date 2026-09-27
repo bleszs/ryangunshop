@@ -34,20 +34,6 @@ export class FirestoreStoreRepository {
     return { phone, storeId: data.storeId, userId: data.userId, role: data.role };
   }
 
-  async claimMessage(messageId: string): Promise<boolean> {
-    try {
-      await this.db.collection("whatsappMessages").doc(messageId).create({
-        createdAt: FieldValue.serverTimestamp(),
-        expiresAt: Timestamp.fromMillis(Date.now() + 7 * 86_400_000),
-      });
-      return true;
-    } catch (error) {
-      const code = (error as { code?: number | string }).code;
-      if (code === 6 || code === "already-exists") return false;
-      throw error;
-    }
-  }
-
   async getProductStock(storeId: string, productName: string): Promise<{
     exact: ProductRecord | null;
     suggestions: ProductRecord[];

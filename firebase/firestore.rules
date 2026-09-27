@@ -127,5 +127,14 @@ service cloud.firestore {
     match /whatsappMessages/{messageId} {
       allow read, write: if false;
     }
+
+    // Antrean webhook dan DLQ hanya dikelola worker melalui Admin SDK.
+    match /whatsappJobs/{jobId} {
+      allow read, write: if false;
+    }
+
+    match /whatsappDeadLetters/{jobId} {
+      allow read, write: if false;
+    }
   }
 }

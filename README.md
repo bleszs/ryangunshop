@@ -72,6 +72,10 @@ Salin `.env.example` menjadi `.env`, lalu isi kredensial WhatsApp, Ollama, dan F
 Test Firebase memakai Local Emulator Suite, sedangkan alur agent/webhook memakai mock
 dan tidak mengirim pesan nyata.
 
+Webhook WhatsApp menggunakan antrean durable Firestore. HTTP 200 hanya dikirim setelah
+job tersimpan idempoten berdasarkan hash message ID. Worker memakai lease, exponential
+backoff, dan dead-letter queue sehingga restart proses tidak menghilangkan pesan.
+
 Panorama 360° disimpan lokal terlebih dahulu. Import, perubahan hotspot, dan hapus
 zona kemudian dikonsolidasikan menjadi satu event Drift outbox per zona. Gambar dan
 preview diunggah ke path tenant Firebase Storage yang deterministik, sementara nama

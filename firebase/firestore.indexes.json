@@ -24,8 +24,15 @@
         { "fieldPath": "isLowStock", "order": "ASCENDING" },
         { "fieldPath": "stock", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "whatsappJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "availableAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
 }
-

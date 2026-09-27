@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Request, Response, Router } from "express";
 import type { AppConfig } from "./config.js";
-import { normalizePhone } from "./normalization.js";
+import type { DurableWhatsAppQueue } from "./whatsapp-queue.js";
 import type { AgentContext, AuthorizedUser, IncomingTextMessage } from "./types.js";
 
 type RawRequest = Request & { rawBody?: Buffer };
@@ -10,11 +10,7 @@ export function registerWhatsAppRoutes(
   router: Router,
   dependencies: WhatsAppDependencies,
 ): void {
-  const { config, store, agent, log } = dependencies;
-  const sendText = dependencies.sendText ?? sendWhatsAppText;
-  const schedule = dependencies.schedule ?? ((work: Promise<void>) => {
-    void work.catch((error) => log.error({ error }, "Background webhook task gagal"));
-  });
+  const { config, queue, log } = dependencies;
 
   router.get("/webhooks/whatsapp", (request: Request, response: Response) => {
     const mode = request.query["hub.mode"];
@@ -27,7 +23,7 @@ export function registerWhatsAppRoutes(
     response.sendStatus(403);
   });
 
-  router.post("/webhooks/whatsapp", (request: RawRequest, response: Response) => {
+  router.post("/webhooks/whatsapp", async (request: RawRequest, response: Response) => {
     const signature = request.header("x-hub-signature-256");
     if (!request.rawBody || !verifyMetaSignature(request.rawBody, signature, config.WHATSAPP_APP_SECRET)) {
       response.sendStatus(401);
@@ -35,37 +31,19 @@ export function registerWhatsAppRoutes(
     }
 
     const messages = extractTextMessages(request.body);
-    // Penjadwalan tidak menunggu proses selesai; ACK tetap dikirim segera.
-    // Untuk production, pindahkan pekerjaan ini ke queue durable setelah ACK.
-    schedule(Promise.all(messages.map(async (message) => {
-      try {
-        if (!(await store.claimMessage(message.id))) return;
-        const phone = normalizePhone(message.from);
-        const authorized = await store.findAuthorizedUser(phone);
-        if (!authorized) {
-          await sendText(config, message.from, "Nomor ini belum terdaftar untuk RyanGunshop.");
-          return;
-        }
-        const answer = await agent.answer(
-          { ...authorized, whatsappMessageId: message.id },
-          message.text,
-        );
-        await sendText(config, message.from, answer);
-      } catch (error) {
-        log.error({ error, messageId: message.id }, "Gagal memproses pesan WhatsApp");
-        await sendText(
-          config,
-          message.from,
-          "Layanan sedang mengalami gangguan. Data tidak diubah; silakan coba lagi.",
-        ).catch((sendError) => log.error({ sendError }, "Gagal mengirim pesan error"));
-      }
-    })).then(() => undefined));
-    response.sendStatus(200);
+    try {
+      // Meta hanya menerima ACK setelah payload tersimpan secara durable. Bila
+      // Firestore gagal, 503 meminta Meta mengirim ulang webhook yang sama.
+      await Promise.all(messages.map((message) => queue.enqueue(message)));
+      response.sendStatus(200);
+    } catch (error) {
+      log.error({ error }, "Gagal menyimpan webhook ke antrean WhatsApp");
+      response.sendStatus(503);
+    }
   });
 }
 
 export interface WhatsAppStore {
-  claimMessage(messageId: string): Promise<boolean>;
   findAuthorizedUser(normalizedPhone: string): Promise<AuthorizedUser | null>;
 }
 
@@ -81,11 +59,8 @@ export type WhatsAppTextSender = (
 
 export interface WhatsAppDependencies {
   config: AppConfig;
-  store: WhatsAppStore;
-  agent: WhatsAppAgent;
+  queue: Pick<DurableWhatsAppQueue, "enqueue">;
   log: { error: (input: unknown, message?: string) => void };
-  sendText?: WhatsAppTextSender;
-  schedule?: (work: Promise<void>) => void;
 }
 
 export function verifyMetaSignature(
@@ -124,13 +99,18 @@ export function extractTextMessages(body: unknown): IncomingTextMessage[] {
         const text = textContainer && typeof textContainer === "object"
           ? (textContainer as Record<string, unknown>).body
           : undefined;
+        const trimmedText = typeof text === "string" ? text.trim() : "";
         if (
           typeof message.id === "string" &&
+          message.id.length > 0 &&
+          message.id.length <= 512 &&
           typeof message.from === "string" &&
-          typeof text === "string" &&
-          text.trim()
+          message.from.length > 0 &&
+          message.from.length <= 32 &&
+          trimmedText.length > 0 &&
+          trimmedText.length <= 4_096
         ) {
-          output.push({ id: message.id, from: message.from, text: text.trim() });
+          output.push({ id: message.id, from: message.from, text: trimmedText });
         }
       }
     }
@@ -138,7 +118,7 @@ export function extractTextMessages(body: unknown): IncomingTextMessage[] {
   return output;
 }
 
-async function sendWhatsAppText(
+export async function sendWhatsAppText(
   config: AppConfig,
   recipient: string,
   body: string,
