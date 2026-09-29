@@ -91,7 +91,10 @@ Status: `[x]` fondasi tersedia, `[ ]` masih harus diimplementasikan/dikonfiguras
 - [ ] Konfigurasi webhook Meta serta `whatsappUsers` whitelist (FR-15).
 - [x] Pindahkan proses webhook ke antrean durable Firestore dengan lease,
   exponential backoff, deduplikasi message ID, dan dead-letter queue.
-- [ ] Worker laporan + signed URL singkat untuk tool `generateReport`.
+- [x] Worker laporan durable untuk tool `generateReport`: PDF/CSV, retry + lease,
+  upload backend-only, signed URL V4 10 menit, balasan WhatsApp, dan lifecycle 1 hari.
+- [ ] Sinkronkan snapshot transaksi tunai/QRIS manual dari Drift ke Firestore agar
+  laporan WhatsApp juga mencakup transaksi offline setelah perangkat kembali online.
 - [ ] Flow confirmation token dua langkah sebelum tool mutasi ditambahkan.
 - [x] Integration test Firebase Emulator + mock Ollama/WhatsApp.
 

@@ -62,3 +62,9 @@ gcloud storage buckets update gs://ryangunshop-pos-2026.firebasestorage.app `
 Terakhir lakukan smoke test panorama dan foto koreksi, lalu pastikan objek
 `predictionCorrections/` memiliki lifecycle hapus 30 hari sebelum mengaktifkan App Check
 enforcement Storage.
+
+Backend laporan juga memerlukan `FIREBASE_STORAGE_BUCKET`. Service account runtime harus
+dapat membuat objek dan menandatangani URL V4 (`signBlob`). Uji bahwa link laporan hanya
+berlaku sesuai `REPORT_LINK_TTL_MINUTES` (default 10 menit) dan lifecycle menghapus prefix
+`reports/` setelah satu hari. Signed URL bersifat bearer link: siapa pun yang menerima link
+dapat mengakses file sampai kedaluwarsa, jadi jangan meneruskannya ke pihak lain.

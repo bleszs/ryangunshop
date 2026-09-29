@@ -15,6 +15,7 @@ stores/{storeId}
 whatsappUsers/{e164Phone}
 whatsappJobs/{sha256MessageId}
 whatsappDeadLetters/{sha256MessageId}
+reportGenerationJobs/{sha256RequestId}
 paymentOrders/{deterministicOrderId}
 paymentNotifications/{sha256GatewayEvent}
 ```
@@ -24,6 +25,12 @@ Order ID deterministik dari tenant, kasir, dan `clientRequestId` membuat permint
 aman diulang. Harga dan stok selalu dibaca ulang dari `stores/{storeId}/products`; klien
 tidak menjadi sumber nominal. Notifikasi gateway dideduplikasi sebelum transaksi dan
 pengurangan stok diselesaikan secara atomik.
+
+`reportGenerationJobs` adalah antrean backend-only dengan status `QUEUED`,
+`PROCESSING`, `COMPLETED`, atau `FAILED`. Dokumen mirror
+`stores/{storeId}/reportJobs/{jobId}` hanya dapat dibaca owner dan tidak menyimpan nomor
+WhatsApp maupun signed URL. Hasil berada di `reports/{storeId}/{jobId}.{pdf|csv}`;
+signed URL V4 dibuat saat pengiriman dan berlaku singkat.
 
 `whatsappUsers` berisi `storeId`, `userId`, `role`, dan `active`. Dokumen ini hanya boleh
 dibaca backend Admin SDK. Password tidak pernah disimpan di Firestore; gunakan Firebase Auth.

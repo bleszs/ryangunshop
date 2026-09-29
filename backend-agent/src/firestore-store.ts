@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   FieldValue,
   Firestore,
@@ -6,6 +6,7 @@ import {
 } from "firebase-admin/firestore";
 import { normalizeSearch } from "./normalization.js";
 import type { AgentContext, AuthorizedUser, DateRange, UserRole } from "./types.js";
+import type { DurableReportQueue } from "./report-queue.js";
 
 interface ProductRecord {
   id: string;
@@ -23,7 +24,10 @@ interface TransactionItem {
 }
 
 export class FirestoreStoreRepository {
-  constructor(private readonly db: Firestore) {}
+  constructor(
+    private readonly db: Firestore,
+    private readonly reportQueue: DurableReportQueue,
+  ) {}
 
   async findAuthorizedUser(phone: string): Promise<AuthorizedUser | null> {
     const snapshot = await this.db.collection("whatsappUsers").doc(phone).get();
@@ -138,21 +142,7 @@ export class FirestoreStoreRepository {
     date: string,
     format: "PDF" | "CSV",
   ): Promise<{ jobId: string; status: "QUEUED" }> {
-    const jobId = randomUUID();
-    await this.db
-      .collection("stores")
-      .doc(context.storeId)
-      .collection("reportJobs")
-      .doc(jobId)
-      .create({
-        date,
-        format,
-        status: "QUEUED",
-        requestedBy: context.userId,
-        whatsappMessageId: context.whatsappMessageId,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    return { jobId, status: "QUEUED" };
+    return this.reportQueue.enqueue(context, date, format);
   }
 
   async auditAction(input: {

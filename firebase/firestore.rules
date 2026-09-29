@@ -108,8 +108,8 @@ service cloud.firestore {
       }
 
       match /reportJobs/{jobId} {
-        allow read, create: if isOwner(storeId);
-        allow update, delete: if false;
+        allow read: if isOwner(storeId);
+        allow write: if false;
       }
 
       // Ditulis Admin SDK backend; klien hanya boleh dibaca owner bila diperlukan.
@@ -143,6 +143,10 @@ service cloud.firestore {
     }
 
     match /paymentNotifications/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /reportGenerationJobs/{jobId} {
       allow read, write: if false;
     }
   }

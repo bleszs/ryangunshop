@@ -110,6 +110,13 @@ test("Firestore rules menjaga isolasi tenant dan batas akses kasir", {
     await assertFails(getDoc(
       doc(ownerA, "paymentNotifications/event-client-forbidden"),
     ));
+    await assertFails(setDoc(
+      doc(ownerA, "stores/store-a/reportJobs/client-forbidden"),
+      { date: "2026-09-30", format: "PDF", status: "QUEUED" },
+    ));
+    await assertFails(getDoc(
+      doc(ownerA, "reportGenerationJobs/client-forbidden"),
+    ));
   } finally {
     await environment.cleanup();
   }

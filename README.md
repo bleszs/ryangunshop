@@ -85,6 +85,14 @@ Webhook WhatsApp menggunakan antrean durable Firestore. HTTP 200 hanya dikirim s
 job tersimpan idempoten berdasarkan hash message ID. Worker memakai lease, exponential
 backoff, dan dead-letter queue sehingga restart proses tidak menghilangkan pesan.
 
+Tool `generateReport` menulis antrean laporan idempoten. Worker menghasilkan PDF/CSV,
+mengunggahnya ke path Storage tenant-scoped, membuat signed URL V4 berumur 10 menit,
+dan mengirim link ke nomor WhatsApp peminta. Signed URL tidak disimpan ke Firestore dan
+objek `reports/` dihapus oleh lifecycle bucket setelah satu hari. Saat ini sumber worker
+adalah transaksi yang sudah ada di Firestore; sinkronisasi checkout tunai/QRIS manual
+dari Drift masih tercatat sebagai TODO agar laporan cloud tidak diklaim lengkap sebelum
+jalur offline-to-cloud tersebut tersedia.
+
 Panorama 360° disimpan lokal terlebih dahulu. Import, perubahan hotspot, dan hapus
 zona kemudian dikonsolidasikan menjadi satu event Drift outbox per zona. Gambar dan
 preview diunggah ke path tenant Firebase Storage yang deterministik, sementara nama

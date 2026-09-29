@@ -13,6 +13,8 @@ mobile/.pub/
 service-account*.json
 firebase-debug.log
 firestore-debug.log
+hs_err_pid*.log
+replay_pid*.log
 
 # Node
 backend-agent/node_modules/
